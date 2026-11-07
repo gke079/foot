@@ -1,0 +1,6 @@
+{
+  "name": "Apex Football Predictor & Live Scores",
+  "description": "Advanced algorithmic & AI football match analysis and prediction platform with form, H2H, player availability, referee tendencies, consecutive goal streaks, and league alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
