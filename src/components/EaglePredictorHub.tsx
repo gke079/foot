@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { Zap, Flame, ShieldCheck, TrendingUp, Sparkles, Filter, ChevronRight, X } from 'lucide-react';
-import { Match } from '../types/football';
+import { Match, PredictionMarketFilter } from '../types/football';
 import { TeamCrest } from './TeamCrest';
+import { PREDICTION_MARKET_OPTIONS } from '../utils/predictionEngine';
 
 interface EaglePredictorHubProps {
   matches: Match[];
   onSelectMatch: (match: Match) => void;
   onClose: () => void;
+  onApplyMarketFilter?: (market: PredictionMarketFilter) => void;
 }
 
 export const EaglePredictorHub: React.FC<EaglePredictorHubProps> = ({
   matches,
   onSelectMatch,
   onClose,
+  onApplyMarketFilter,
 }) => {
   const [marketFilter, setMarketFilter] = useState<'ALL' | 'CONSECUTIVE_GOALS' | 'HIGH_CONFIDENCE' | 'OVER_GOALS' | 'CLEAN_SHEET'>('ALL');
 
@@ -112,6 +115,38 @@ export const EaglePredictorHub: React.FC<EaglePredictorHubProps> = ({
 
         {/* Content Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-5 flex-1">
+          {/* Quick Jump to Ranked Market Feed */}
+          {onApplyMarketFilter && (
+            <div className="p-3.5 rounded-2xl bg-[#0f1726] border border-sky-600/40 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-sky-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                    Rank All Games by Specific Prediction
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Highest % First
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mb-2.5">
+                Select any prediction market to view all matches on today's slate arranged from highest to lowest probability:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {PREDICTION_MARKET_OPTIONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => onApplyMarketFilter(opt.id)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#17253d] hover:bg-sky-600 hover:text-white text-slate-200 border border-slate-700/80 hover:border-sky-500 transition-all flex items-center gap-1 shadow-sm"
+                  >
+                    <span>{opt.icon}</span>
+                    <span>{opt.shortLabel}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* SECTION 1: CONSECUTIVE GOALS RADAR */}
           {(marketFilter === 'ALL' || marketFilter === 'CONSECUTIVE_GOALS') && (
             <div className="space-y-3">

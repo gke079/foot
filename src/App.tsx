@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Match, LeagueNotificationSubscription, AppNotification } from './types/football';
+import { Match, LeagueNotificationSubscription, AppNotification, PredictionMarketFilter } from './types/football';
 import { ALL_MATCHES, POPULAR_COMPETITIONS, getMatchesForDate } from './data/mockMatches';
 import { Header } from './components/Header';
 import { SubHeader, RegionFilter } from './components/SubHeader';
@@ -13,7 +13,10 @@ import { CalendarModal } from './components/CalendarModal';
 import { SearchModal } from './components/SearchModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LeaguesMenuModal } from './components/LeaguesMenuModal';
-import { Zap, Sparkles, Star, Bell, Calendar as CalendarIcon, Filter, Globe, RefreshCw, AlertCircle } from 'lucide-react';
+import { PredictionMarketSelector } from './components/PredictionMarketSelector';
+import { RankedMatchCard } from './components/RankedMatchCard';
+import { PREDICTION_MARKET_OPTIONS, getMarketProbability } from './utils/predictionEngine';
+import { Zap, Sparkles, Star, Bell, Calendar as CalendarIcon, Filter, Globe, RefreshCw, AlertCircle, ArrowDownWideNarrow, SlidersHorizontal, LayoutList, LayoutGrid, Award } from 'lucide-react';
 
 export default function App() {
   // Current active date (default to today: 2026-11-07)
@@ -25,6 +28,12 @@ export default function App() {
   const [showTeamForm, setShowTeamForm] = useState<boolean>(true);
   const [selectedLeagueFilter, setSelectedLeagueFilter] = useState<string | null>(null);
   const [activeRegion, setActiveRegion] = useState<RegionFilter>('ALL');
+
+  // Prediction Market Ranking Filter (Selection Box)
+  const [selectedPredictionMarket, setSelectedPredictionMarket] = useState<PredictionMarketFilter>('ALL');
+  const [onlyHighProbability, setOnlyHighProbability] = useState<boolean>(false);
+  const [minProbabilityThreshold, setMinProbabilityThreshold] = useState<number>(0);
+  const [rankingLayoutMode, setRankingLayoutMode] = useState<'RANKED_LIST' | 'LEAGUE_GROUPS'>('RANKED_LIST');
 
   // Bottom Navigation state
   const [bottomNavTab, setBottomNavTab] = useState<NavTab>('SCORES');
@@ -235,7 +244,7 @@ export default function App() {
     };
   }, [selectedDate]);
 
-  // Apply filters: Live only, My Scores, League filter
+  // Apply filters: Live only, My Scores, League filter, Region, AND Prediction Market!
   const displayedMatches = useMemo(() => {
     let result = rawMatchesForDate;
 
@@ -266,8 +275,50 @@ export default function App() {
       }
     }
 
+    // Prediction Market Filtering and Sorting from Highest Probability to Lowest Probability
+    if (selectedPredictionMarket !== 'ALL') {
+      const meta = PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket);
+      const effectiveThreshold = onlyHighProbability
+        ? Math.max(minProbabilityThreshold, meta?.defaultHighProbabilityThreshold || 50)
+        : minProbabilityThreshold;
+
+      if (effectiveThreshold > 0) {
+        result = result.filter(m => getMarketProbability(m, selectedPredictionMarket) >= effectiveThreshold);
+      }
+
+      // Explicitly sort starting from highest probability down to lowest probability
+      result = [...result].sort((a, b) => {
+        const probA = getMarketProbability(a, selectedPredictionMarket);
+        const probB = getMarketProbability(b, selectedPredictionMarket);
+        return probB - probA;
+      });
+    }
+
     return result;
-  }, [rawMatchesForDate, isLiveOnly, activeSubTab, favoriteMatchIds, selectedLeagueFilter, activeRegion]);
+  }, [
+    rawMatchesForDate,
+    isLiveOnly,
+    activeSubTab,
+    favoriteMatchIds,
+    selectedLeagueFilter,
+    activeRegion,
+    selectedPredictionMarket,
+    onlyHighProbability,
+    minProbabilityThreshold,
+  ]);
+
+  const topMarketProb = useMemo(() => {
+    if (selectedPredictionMarket === 'ALL' || displayedMatches.length === 0) return undefined;
+    return getMarketProbability(displayedMatches[0], selectedPredictionMarket);
+  }, [displayedMatches, selectedPredictionMarket]);
+
+  const topTeamName = useMemo(() => {
+    if (selectedPredictionMarket === 'ALL' || displayedMatches.length === 0) return undefined;
+    const first = displayedMatches[0];
+    if (selectedPredictionMarket === 'HOME') return first.homeTeam.name;
+    if (selectedPredictionMarket === 'AWAY') return first.awayTeam.name;
+    return `${first.homeTeam.shortName} vs ${first.awayTeam.shortName}`;
+  }, [displayedMatches, selectedPredictionMarket]);
 
   const allAvailableCompetitions = useMemo(() => {
     const map = new Map<string, Match['competition']>();
@@ -330,6 +381,19 @@ export default function App() {
         selectedDate={selectedDate}
         onSelectDate={date => setSelectedDate(date)}
         onOpenCalendarModal={() => setIsCalendarModalOpen(true)}
+      />
+
+      {/* Prediction Market Selection Box & Quick Pill Switcher */}
+      <PredictionMarketSelector
+        selectedMarket={selectedPredictionMarket}
+        onSelectMarket={market => setSelectedPredictionMarket(market)}
+        onlyHighProbability={onlyHighProbability}
+        onToggleOnlyHighProbability={() => setOnlyHighProbability(prev => !prev)}
+        minProbabilityThreshold={minProbabilityThreshold}
+        onChangeMinProbabilityThreshold={setMinProbabilityThreshold}
+        totalMatchesCount={displayedMatches.length}
+        highestProbability={topMarketProb}
+        topTeamName={topTeamName}
       />
 
       {/* Real Match Feed Banner */}
@@ -396,7 +460,7 @@ export default function App() {
       )}
 
       {/* Active Filter Pill Bar (if any filter is applied) */}
-      {(selectedLeagueFilter || isLiveOnly || isPastDate) && (
+      {(selectedLeagueFilter || isLiveOnly || isPastDate || selectedPredictionMarket !== 'ALL') && (
         <div className="max-w-4xl mx-auto w-full px-4 pt-2.5 flex flex-wrap items-center gap-2">
           {isPastDate && (
             <div className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
@@ -428,23 +492,124 @@ export default function App() {
               </button>
             </div>
           )}
+
+          {selectedPredictionMarket !== 'ALL' && (
+            <div className="text-[11px] font-semibold text-sky-300 bg-sky-950/60 border border-sky-600/50 px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
+              <ArrowDownWideNarrow className="w-3.5 h-3.5 text-sky-400" />
+              <span>
+                Sorted by {PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.shortLabel} (Highest to Lowest)
+              </span>
+              <button
+                onClick={() => setSelectedPredictionMarket('ALL')}
+                className="text-slate-400 hover:text-white ml-1"
+                title="Clear prediction sort"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Main Content: Match Accordions Feed */}
+      {/* Main Content: Match Accordions or Ranked Feed */}
       <main className="max-w-4xl mx-auto w-full px-2 sm:px-4 py-3 flex-1">
-        {groupedMatches.length === 0 ? (
+        {selectedPredictionMarket !== 'ALL' && displayedMatches.length > 0 && (
+          <div className="mb-4 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-[#14233c] via-[#162744] to-[#121c2e] border border-sky-800/60 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                {PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.icon || '🎯'}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm sm:text-base font-extrabold text-white">
+                    {PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.label || selectedPredictionMarket}
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                    Highest → Lowest Probability
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Found <strong className="text-white font-mono">{displayedMatches.length}</strong> games on {selectedDate}
+                  {topMarketProb !== undefined && (
+                    <span> · Top pick: <strong className="text-emerald-300">{topTeamName} ({topMarketProb}%)</strong></span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Layout switch button: Ranked Flat List vs Group by League */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <div className="flex items-center bg-[#0d1524] p-1 rounded-xl border border-slate-700/80 text-xs">
+                <button
+                  onClick={() => setRankingLayoutMode('RANKED_LIST')}
+                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors ${
+                    rankingLayoutMode === 'RANKED_LIST'
+                      ? 'bg-sky-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Flat ranked list from #1 down"
+                >
+                  <LayoutList className="w-3.5 h-3.5" />
+                  <span>Ranked List</span>
+                </button>
+                <button
+                  onClick={() => setRankingLayoutMode('LEAGUE_GROUPS')}
+                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors ${
+                    rankingLayoutMode === 'LEAGUE_GROUPS'
+                      ? 'bg-sky-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Group by league"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>By League</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setSelectedPredictionMarket('ALL')}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors"
+                title="Clear prediction sort"
+              >
+                ✕ Reset
+              </button>
+            </div>
+          </div>
+        )}
+
+        {displayedMatches.length === 0 ? (
           <div className="p-12 text-center rounded-3xl bg-[#141f32] border border-slate-800 my-6">
             <Filter className="w-10 h-10 text-slate-600 mx-auto mb-3" />
             <h3 className="text-base font-bold text-white">No matches found</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              {isLiveOnly
+              {selectedPredictionMarket !== 'ALL'
+                ? `No games on this date reached the active threshold for ${PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.label}. Try lowering the minimum probability or switching to All Matches.`
+                : isLiveOnly
                 ? 'There are no live games in progress right now. Toggle the "Live" filter off to see scheduled games.'
                 : activeSubTab === 'MY_SCORES'
                 ? 'You have not favorited any matches yet. Click the star icon on any match to track it here.'
                 : 'No fixtures found for the selected date. Select a different date from the calendar.'}
             </p>
-            {isLiveOnly && (
+            {selectedPredictionMarket !== 'ALL' && (
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => {
+                    setMinProbabilityThreshold(0);
+                    setOnlyHighProbability(false);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold hover:bg-sky-500 transition-colors"
+                >
+                  Show All {PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.shortLabel} Matches
+                </button>
+                <button
+                  onClick={() => setSelectedPredictionMarket('ALL')}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-colors"
+                >
+                  Reset Filter
+                </button>
+              </div>
+            )}
+            {isLiveOnly && selectedPredictionMarket === 'ALL' && (
               <button
                 onClick={() => setIsLiveOnly(false)}
                 className="mt-4 px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold hover:bg-sky-500 transition-colors"
@@ -452,7 +617,7 @@ export default function App() {
                 Show All Matches
               </button>
             )}
-            {activeSubTab === 'MY_SCORES' && (
+            {activeSubTab === 'MY_SCORES' && selectedPredictionMarket === 'ALL' && (
               <button
                 onClick={() => setActiveSubTab('ALL')}
                 className="mt-4 px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold hover:bg-sky-500 transition-colors"
@@ -461,7 +626,27 @@ export default function App() {
               </button>
             )}
           </div>
+        ) : selectedPredictionMarket !== 'ALL' && rankingLayoutMode === 'RANKED_LIST' ? (
+          /* Flat Ranked Feed: Arranged starting with highest probability to lowest probability */
+          <div className="space-y-3">
+            {displayedMatches.map((match, index) => (
+              <RankedMatchCard
+                key={match.id}
+                match={match}
+                rank={index + 1}
+                market={selectedPredictionMarket}
+                showTeamForm={showTeamForm}
+                isFavorite={favoriteMatchIds.has(match.id)}
+                onToggleFavorite={e => {
+                  e.stopPropagation();
+                  toggleFavorite(match.id);
+                }}
+                onSelectMatch={matchItem => setSelectedMatchForDetail(matchItem)}
+              />
+            ))}
+          </div>
         ) : (
+          /* Grouped by League Feed */
           groupedMatches.map(({ competition, matches }) => {
             const isSubscribed = subscriptions.some(s => s.leagueId === competition.id && s.enabled);
             const isExpanded = expandedLeagues[competition.id] ?? true;
@@ -523,6 +708,10 @@ export default function App() {
           matches={rawMatchesForDate}
           onSelectMatch={match => setSelectedMatchForDetail(match)}
           onClose={() => setIsEaglePredictorOpen(false)}
+          onApplyMarketFilter={market => {
+            setSelectedPredictionMarket(market);
+            setIsEaglePredictorOpen(false);
+          }}
         />
       )}
 
@@ -549,7 +738,7 @@ export default function App() {
       <SearchModal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
-        matches={ALL_MATCHES}
+        matches={rawMatchesForDate}
         onSelectMatch={match => setSelectedMatchForDetail(match)}
       />
 

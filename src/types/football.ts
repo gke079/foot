@@ -86,9 +86,11 @@ export interface PredictionData {
   goalMarkets: {
     over05: number;
     over15: number;
+    under15?: number;
     over25: number;
     under25: number;
     over35: number;
+    under35?: number;
   };
   bothTeamsToScore: {
     yes: number;
@@ -203,3 +205,28 @@ export interface AppNotification {
   message: string;
   read: boolean;
 }
+
+export type PredictionMarketFilter =
+  | 'ALL'
+  | 'HOME'
+  | 'DRAW'
+  | 'AWAY'
+  | 'OVER_15'
+  | 'OVER_25'
+  | 'OVER_35'
+  | 'UNDER_15'
+  | 'UNDER_25'
+  | 'UNDER_35'
+  | 'BTTS'
+  | 'BTTS_NO';
+
+export interface PredictionMarketMeta {
+  id: PredictionMarketFilter;
+  label: string;
+  shortLabel: string;
+  category: '1X2' | 'GOALS_OVER' | 'GOALS_UNDER' | 'BTTS';
+  icon: string;
+  description: string;
+  defaultHighProbabilityThreshold: number;
+}
+

@@ -1,4 +1,4 @@
-import { Team, Referee, H2HSummary, PredictionData, ConsecutiveGoalsPrediction } from '../types/football';
+import { Team, Referee, H2HSummary, PredictionData, ConsecutiveGoalsPrediction, Match, PredictionMarketFilter, PredictionMarketMeta } from '../types/football';
 
 /**
  * Factorial calculation helper for Poisson distribution
@@ -225,9 +225,11 @@ export function calculateMatchPredictions(
     goalMarkets: {
       over05: Math.round(over05 * 100),
       over15: Math.round(over15 * 100),
+      under15: Math.round((1 - over15) * 100),
       over25: Math.round(over25 * 100),
       under25: Math.round((1 - over25) * 100),
       over35: Math.round(over35 * 100),
+      under35: Math.round((1 - over35) * 100),
     },
     bothTeamsToScore: {
       yes: Math.round(bttsYes * 100),
@@ -368,3 +370,243 @@ function samplePoisson(lambda: number): number {
   } while (p > L && k < 12);
   return k - 1;
 }
+
+export const PREDICTION_MARKET_OPTIONS: PredictionMarketMeta[] = [
+  {
+    id: 'HOME',
+    label: 'Home Win (1)',
+    shortLabel: 'Home Win',
+    category: '1X2',
+    icon: '🏠',
+    description: 'Home team wins in regular 90 minutes',
+    defaultHighProbabilityThreshold: 50,
+  },
+  {
+    id: 'DRAW',
+    label: 'Draw (X)',
+    shortLabel: 'Draw (X)',
+    category: '1X2',
+    icon: '🤝',
+    description: 'Match finishes with level scoreline',
+    defaultHighProbabilityThreshold: 28,
+  },
+  {
+    id: 'AWAY',
+    label: 'Away Win (2)',
+    shortLabel: 'Away Win',
+    category: '1X2',
+    icon: '✈️',
+    description: 'Away team wins in regular 90 minutes',
+    defaultHighProbabilityThreshold: 45,
+  },
+  {
+    id: 'OVER_15',
+    label: 'Over 1.5 Goals (O1.5)',
+    shortLabel: 'Over 1.5',
+    category: 'GOALS_OVER',
+    icon: '⚽',
+    description: '2 or more total goals scored in match',
+    defaultHighProbabilityThreshold: 72,
+  },
+  {
+    id: 'OVER_25',
+    label: 'Over 2.5 Goals (O2.5)',
+    shortLabel: 'Over 2.5',
+    category: 'GOALS_OVER',
+    icon: '🔥',
+    description: '3 or more total goals scored in match',
+    defaultHighProbabilityThreshold: 55,
+  },
+  {
+    id: 'OVER_35',
+    label: 'Over 3.5 Goals (O3.5)',
+    shortLabel: 'Over 3.5',
+    category: 'GOALS_OVER',
+    icon: '💥',
+    description: '4 or more total goals scored in match',
+    defaultHighProbabilityThreshold: 35,
+  },
+  {
+    id: 'UNDER_15',
+    label: 'Under 1.5 Goals (U1.5)',
+    shortLabel: 'Under 1.5',
+    category: 'GOALS_UNDER',
+    icon: '🛡️',
+    description: '1 or 0 total goals scored in match',
+    defaultHighProbabilityThreshold: 32,
+  },
+  {
+    id: 'UNDER_25',
+    label: 'Under 2.5 Goals (U2.5)',
+    shortLabel: 'Under 2.5',
+    category: 'GOALS_UNDER',
+    icon: '🧱',
+    description: '2 or fewer total goals scored in match',
+    defaultHighProbabilityThreshold: 48,
+  },
+  {
+    id: 'UNDER_35',
+    label: 'Under 3.5 Goals (U3.5)',
+    shortLabel: 'Under 3.5',
+    category: 'GOALS_UNDER',
+    icon: '🔒',
+    description: '3 or fewer total goals scored in match',
+    defaultHighProbabilityThreshold: 68,
+  },
+  {
+    id: 'BTTS',
+    label: 'Both Teams To Score (BTTS Yes)',
+    shortLabel: 'BTTS Yes',
+    category: 'BTTS',
+    icon: '🎯',
+    description: 'Both home and away teams score at least 1 goal',
+    defaultHighProbabilityThreshold: 52,
+  },
+  {
+    id: 'BTTS_NO',
+    label: 'Both Teams Score No (BTTS No)',
+    shortLabel: 'BTTS No',
+    category: 'BTTS',
+    icon: '🚫',
+    description: 'At least one team keeps a clean sheet',
+    defaultHighProbabilityThreshold: 48,
+  },
+];
+
+/**
+ * Extract probability percentage (0-100) for a given prediction market
+ */
+export function getMarketProbability(match: Match, market: PredictionMarketFilter): number {
+  const p = match.predictions;
+  if (!p) return 0;
+  switch (market) {
+    case 'HOME':
+      return p.outcomeProbabilities?.homeWin ?? 0;
+    case 'DRAW':
+      return p.outcomeProbabilities?.draw ?? 0;
+    case 'AWAY':
+      return p.outcomeProbabilities?.awayWin ?? 0;
+    case 'OVER_15':
+      return p.goalMarkets?.over15 ?? 0;
+    case 'OVER_25':
+      return p.goalMarkets?.over25 ?? 0;
+    case 'OVER_35':
+      return p.goalMarkets?.over35 ?? 0;
+    case 'UNDER_15':
+      return p.goalMarkets?.under15 ?? Math.max(1, 100 - (p.goalMarkets?.over15 ?? 50));
+    case 'UNDER_25':
+      return p.goalMarkets?.under25 ?? Math.max(1, 100 - (p.goalMarkets?.over25 ?? 50));
+    case 'UNDER_35':
+      return p.goalMarkets?.under35 ?? Math.max(1, 100 - (p.goalMarkets?.over35 ?? 30));
+    case 'BTTS':
+      return p.bothTeamsToScore?.yes ?? 0;
+    case 'BTTS_NO':
+      return p.bothTeamsToScore?.no ?? Math.max(1, 100 - (p.bothTeamsToScore?.yes ?? 50));
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Returns visual styling, confidence tier, and badge metadata for a market probability
+ */
+export function getMarketDetailVerdict(market: PredictionMarketFilter, prob: number): {
+  badgeColor: string;
+  badgeBg: string;
+  badgeBorder: string;
+  barColor: string;
+  confidenceTier: 'VERY_HIGH' | 'HIGH' | 'GOOD' | 'MODERATE' | 'LOW';
+  confidenceLabel: string;
+} {
+  let tier: 'VERY_HIGH' | 'HIGH' | 'GOOD' | 'MODERATE' | 'LOW' = 'MODERATE';
+  let label = 'Moderate Edge';
+
+  if (market === 'DRAW') {
+    if (prob >= 35) {
+      tier = 'VERY_HIGH';
+      label = 'Super High Draw Edge';
+    } else if (prob >= 30) {
+      tier = 'HIGH';
+      label = 'High Draw Edge';
+    } else if (prob >= 26) {
+      tier = 'GOOD';
+      label = 'Good Draw Value';
+    } else {
+      tier = 'MODERATE';
+      label = 'Average Draw Rate';
+    }
+  } else if (market === 'OVER_35' || market === 'UNDER_15') {
+    if (prob >= 46) {
+      tier = 'VERY_HIGH';
+      label = 'Exceptional Edge';
+    } else if (prob >= 38) {
+      tier = 'HIGH';
+      label = 'Strong Edge';
+    } else if (prob >= 30) {
+      tier = 'GOOD';
+      label = 'Positive Edge';
+    } else {
+      tier = 'MODERATE';
+      label = 'Moderate Edge';
+    }
+  } else {
+    if (prob >= 75) {
+      tier = 'VERY_HIGH';
+      label = 'Very High Banker';
+    } else if (prob >= 62) {
+      tier = 'HIGH';
+      label = 'Strong Favorite';
+    } else if (prob >= 50) {
+      tier = 'GOOD';
+      label = 'Solid Edge';
+    } else if (prob >= 40) {
+      tier = 'MODERATE';
+      label = 'Balanced Edge';
+    } else {
+      tier = 'LOW';
+      label = 'Low Probability';
+    }
+  }
+
+  let badgeColor = 'text-emerald-300';
+  let badgeBg = 'bg-emerald-950/70';
+  let badgeBorder = 'border-emerald-500/60';
+  let barColor = 'from-emerald-500 to-teal-400';
+
+  if (tier === 'VERY_HIGH') {
+    badgeColor = 'text-emerald-300';
+    badgeBg = 'bg-emerald-950/80';
+    badgeBorder = 'border-emerald-500/80 shadow-[0_0_12px_rgba(16,185,129,0.3)]';
+    barColor = 'from-emerald-400 via-teal-400 to-cyan-400';
+  } else if (tier === 'HIGH') {
+    badgeColor = 'text-sky-300';
+    badgeBg = 'bg-sky-950/80';
+    badgeBorder = 'border-sky-500/80';
+    barColor = 'from-sky-400 to-indigo-400';
+  } else if (tier === 'GOOD') {
+    badgeColor = 'text-cyan-300';
+    badgeBg = 'bg-cyan-950/70';
+    badgeBorder = 'border-cyan-600/60';
+    barColor = 'from-cyan-500 to-sky-500';
+  } else if (tier === 'MODERATE') {
+    badgeColor = 'text-amber-300';
+    badgeBg = 'bg-amber-950/70';
+    badgeBorder = 'border-amber-600/60';
+    barColor = 'from-amber-500 to-yellow-500';
+  } else {
+    badgeColor = 'text-slate-400';
+    badgeBg = 'bg-slate-900/60';
+    badgeBorder = 'border-slate-700/60';
+    barColor = 'from-slate-500 to-slate-400';
+  }
+
+  return {
+    badgeColor,
+    badgeBg,
+    badgeBorder,
+    barColor,
+    confidenceTier: tier,
+    confidenceLabel: label,
+  };
+}
+

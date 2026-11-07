@@ -2,7 +2,6 @@ import { Match, Competition, Team, Referee, H2HSummary, FormResult } from '../ty
 import { calculateMatchPredictions } from '../utils/predictionEngine';
 
 interface EspnLeagueDef {
-  code: string;
   id: string;
   name: string;
   country: string;
@@ -10,35 +9,95 @@ interface EspnLeagueDef {
   category: Competition['category'];
 }
 
-export const ESPN_LEAGUES: EspnLeagueDef[] = [
-  // Top 5 European Leagues (Popular)
-  { code: 'eng.1', id: 'pl', name: 'Premier League', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', category: 'Popular' },
-  { code: 'esp.1', id: 'laliga', name: 'La Liga', country: 'Spain', flag: '🇪🇸', category: 'Popular' },
-  { code: 'ita.1', id: 'seriea', name: 'Serie A', country: 'Italy', flag: '🇮🇹', category: 'Popular' },
-  { code: 'ger.1', id: 'bundesliga', name: 'Bundesliga', country: 'Germany', flag: '🇩🇪', category: 'Popular' },
-  { code: 'fra.1', id: 'ligue1', name: 'Ligue 1', country: 'France', flag: '🇫🇷', category: 'Popular' },
-  // UEFA Competitions
-  { code: 'uefa.champions', id: 'ucl', name: 'UEFA Champions League', country: 'Europe', flag: '🇪🇺', category: 'European' },
-  { code: 'uefa.europa', id: 'uel', name: 'UEFA Europa League', country: 'Europe', flag: '🇪🇺', category: 'European' },
-  { code: 'uefa.europa.conf', id: 'uecl', name: 'UEFA Conference League', country: 'Europe', flag: '🇪🇺', category: 'European' },
-  // Domestic & Secondary European
-  { code: 'eng.2', id: 'champ', name: 'Championship', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', category: 'Domestic' },
-  { code: 'esp.2', id: 'segunda', name: 'LaLiga 2', country: 'Spain', flag: '🇪🇸', category: 'Domestic' },
-  { code: 'ned.1', id: 'eredivisie', name: 'Eredivisie', country: 'Netherlands', flag: '🇳🇱', category: 'European' },
-  { code: 'por.1', id: 'primeira', name: 'Primeira Liga', country: 'Portugal', flag: '🇵🇹', category: 'European' },
-  { code: 'tur.1', id: 'superlig', name: 'Süper Lig', country: 'Turkey', flag: '🇹🇷', category: 'European' },
-  { code: 'sco.1', id: 'scotland', name: 'Scottish Premiership', country: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', category: 'European' },
-  { code: 'bel.1', id: 'belgium', name: 'Belgian Pro League', country: 'Belgium', flag: '🇧🇪', category: 'European' },
+/**
+ * Comprehensive dictionary of ESPN soccer league IDs mapped to our Competition models
+ */
+export const ESPN_LEAGUES_BY_ID: Record<string, EspnLeagueDef> = {
+  // Top 5 European Leagues
+  '700': { id: 'pl', name: 'Premier League', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', category: 'Popular' },
+  '740': { id: 'laliga', name: 'La Liga', country: 'Spain', flag: '🇪🇸', category: 'Popular' },
+  '720': { id: 'bundesliga', name: 'Bundesliga', country: 'Germany', flag: '🇩🇪', category: 'Popular' },
+  '730': { id: 'seriea', name: 'Serie A', country: 'Italy', flag: '🇮🇹', category: 'Popular' },
+  '710': { id: 'ligue1', name: 'Ligue 1', country: 'France', flag: '🇫🇷', category: 'Popular' },
+
+  // European Continental Competitions
+  '775': { id: 'ucl', name: 'UEFA Champions League', country: 'Europe', flag: '🇪🇺', category: 'European' },
+  '776': { id: 'uel', name: 'UEFA Europa League', country: 'Europe', flag: '🇪🇺', category: 'European' },
+  '20296': { id: 'uecl', name: 'UEFA Conference League', country: 'Europe', flag: '🇪🇺', category: 'European' },
+  '2395': { id: 'unl', name: 'UEFA Nations League', country: 'Europe', flag: '🇪🇺', category: 'European' },
+  '19483': { id: 'uwcl', name: "UEFA Women's Champions League", country: 'Europe', flag: '🇪🇺', category: 'European' },
+
+  // English Domestic & Cups
+  '3918': { id: 'facup', name: 'FA Cup', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', category: 'Domestic' },
+  '3914': { id: 'champ', name: 'Championship', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', category: 'Domestic' },
+  '3920': { id: 'carabao', name: 'Carabao Cup', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', category: 'Domestic' },
+  '3917': { id: 'natleague', name: 'National League', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', category: 'Domestic' },
+  '8097': { id: 'wsl', name: "Women's Super League", country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', category: 'Domestic' },
+
+  // European Domestic Leagues
+  '725': { id: 'eredivisie', name: 'Eredivisie', country: 'Netherlands', flag: '🇳🇱', category: 'European' },
+  '3933': { id: 'eerste', name: 'Keuken Kampioen Divisie', country: 'Netherlands', flag: '🇳🇱', category: 'European' },
+  '715': { id: 'primeira', name: 'Primeira Liga', country: 'Portugal', flag: '🇵🇹', category: 'European' },
+  '3946': { id: 'superlig', name: 'Süper Lig', country: 'Turkey', flag: '🇹🇷', category: 'European' },
+  '735': { id: 'scotland', name: 'Scottish Premiership', country: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', category: 'European' },
+  '3940': { id: 'scot_champ', name: 'Scottish Championship', country: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', category: 'Domestic' },
+  '3901': { id: 'belgium', name: 'Belgian Pro League', country: 'Belgium', flag: '🇧🇪', category: 'European' },
+  '3921': { id: 'segunda', name: 'LaLiga 2', country: 'Spain', flag: '🇪🇸', category: 'Domestic' },
+  '3951': { id: 'copadelrey', name: 'Copa del Rey', country: 'Spain', flag: '🇪🇸', category: 'Domestic' },
+  '20956': { id: 'ligaf', name: 'Liga F', country: 'Spain', flag: '🇪🇸', category: 'Domestic' },
+  '3927': { id: 'bundesliga2', name: '2. Bundesliga', country: 'Germany', flag: '🇩🇪', category: 'Domestic' },
+  '3954': { id: 'dfbpokal', name: 'DFB-Pokal', country: 'Germany', flag: '🇩🇪', category: 'Domestic' },
+  '3931': { id: 'serieb', name: 'Serie B', country: 'Italy', flag: '🇮🇹', category: 'Domestic' },
+  '3956': { id: 'coppaitalia', name: 'Coppa Italia', country: 'Italy', flag: '🇮🇹', category: 'Domestic' },
+  '3926': { id: 'ligue2', name: 'Ligue 2', country: 'France', flag: '🇫🇷', category: 'Domestic' },
+  '3952': { id: 'coupefrance', name: 'Coupe de France', country: 'France', flag: '🇫🇷', category: 'Domestic' },
+  '20955': { id: 'premiere_ligue_fr', name: 'Première Ligue', country: 'France', flag: '🇫🇷', category: 'Domestic' },
+  '3945': { id: 'allsvenskan', name: 'Allsvenskan', country: 'Sweden', flag: '🇸🇪', category: 'European' },
+  '3960': { id: 'eliteserien', name: 'Eliteserien', country: 'Norway', flag: '🇳🇴', category: 'European' },
+  '3913': { id: 'superliga_dk', name: 'Danish Superliga', country: 'Denmark', flag: '🇩🇰', category: 'European' },
+  '3907': { id: 'austria', name: 'Austrian Bundesliga', country: 'Austria', flag: '🇦🇹', category: 'European' },
+  '3955': { id: 'greece', name: 'Super League Greece', country: 'Greece', flag: '🇬🇷', category: 'European' },
+  '3939': { id: 'russia', name: 'Russian Premier League', country: 'Russia', flag: '🇷🇺', category: 'European' },
+
   // Americas
-  { code: 'usa.1', id: 'mls', name: 'Major League Soccer', country: 'USA', flag: '🇺🇸', category: 'Americas' },
-  { code: 'mex.1', id: 'ligamx', name: 'Liga MX', country: 'Mexico', flag: '🇲🇽', category: 'Americas' },
-  { code: 'bra.1', id: 'brasileirao', name: 'Brasileirão Serie A', country: 'Brazil', flag: '🇧🇷', category: 'Americas' },
-  { code: 'arg.1', id: 'argentina', name: 'Liga Profesional', country: 'Argentina', flag: '🇦🇷', category: 'Americas' },
-  // Asia & Africa
-  { code: 'sau.1', id: 'saudi', name: 'Saudi Pro League', country: 'Saudi Arabia', flag: '🇸🇦', category: 'Asia' },
-  { code: 'jpn.1', id: 'jleague', name: 'J1 League', country: 'Japan', flag: '🇯🇵', category: 'Asia' },
-  { code: 'caf.champions', id: 'caf', name: 'CAF Champions League', country: 'Africa', flag: '🌍', category: 'Africa' },
-];
+  '770': { id: 'mls', name: 'Major League Soccer', country: 'USA', flag: '🇺🇸', category: 'Americas' },
+  '760': { id: 'ligamx', name: 'Liga MX', country: 'Mexico', flag: '🇲🇽', category: 'Americas' },
+  '4002': { id: 'usl', name: 'USL Championship', country: 'USA', flag: '🇺🇸', category: 'Americas' },
+  '8301': { id: 'nwsl', name: 'NWSL', country: 'USA', flag: '🇺🇸', category: 'Americas' },
+  '23633': { id: 'usl_super', name: 'USL Super League', country: 'USA', flag: '🇺🇸', category: 'Americas' },
+  '19425': { id: 'leagues_cup', name: 'Leagues Cup', country: 'Americas', flag: '🌎', category: 'Americas' },
+  '19267': { id: 'concacaf_nl', name: 'Concacaf Nations League', country: 'Americas', flag: '🌎', category: 'Americas' },
+  '745': { id: 'argentina', name: 'Liga Profesional', country: 'Argentina', flag: '🇦🇷', category: 'Americas' },
+  '4007': { id: 'brazil_b', name: 'Brasileirão Série B', country: 'Brazil', flag: '🇧🇷', category: 'Americas' },
+  '8306': { id: 'brazil_cup', name: 'Copa do Brasil', country: 'Brazil', flag: '🇧🇷', category: 'Americas' },
+  '640': { id: 'chile', name: 'Primera División', country: 'Chile', flag: '🇨🇱', category: 'Americas' },
+  '650': { id: 'colombia', name: 'Primera A', country: 'Colombia', flag: '🇨🇴', category: 'Americas' },
+  '670': { id: 'peru', name: 'Liga 1', country: 'Peru', flag: '🇵🇪', category: 'Americas' },
+  '660': { id: 'ecuador', name: 'LigaPro', country: 'Ecuador', flag: '🇪🇨', category: 'Americas' },
+  '3934': { id: 'paraguay', name: 'División de Honor', country: 'Paraguay', flag: '🇵🇾', category: 'Americas' },
+  '620': { id: 'bolivia', name: 'División Profesional', country: 'Bolivia', flag: '🇧🇴', category: 'Americas' },
+  '3932': { id: 'mex_expansion', name: 'Liga de Expansión MX', country: 'Mexico', flag: '🇲🇽', category: 'Americas' },
+  '4005': { id: 'costa_rica', name: 'Primera División', country: 'Costa Rica', flag: '🇨🇷', category: 'Americas' },
+  '3928': { id: 'guatemala', name: 'Liga Nacional', country: 'Guatemala', flag: '🇬🇹', category: 'Americas' },
+  '3929': { id: 'honduras', name: 'Liga Nacional', country: 'Honduras', flag: '🇭🇳', category: 'Americas' },
+  '3943': { id: 'el_salvador', name: 'Primera División', country: 'El Salvador', flag: '🇸🇻', category: 'Americas' },
+  '3949': { id: 'venezuela', name: 'Liga FUTVE', country: 'Venezuela', flag: '🇻🇪', category: 'Americas' },
+
+  // Asia & Oceania
+  '21231': { id: 'saudi', name: 'Saudi Pro League', country: 'Saudi Arabia', flag: '🇸🇦', category: 'Asia' },
+  '750': { id: 'jleague', name: 'J1 League', country: 'Japan', flag: '🇯🇵', category: 'Asia' },
+  '3906': { id: 'aleague', name: 'A-League Men', country: 'Australia', flag: '🇦🇺', category: 'Asia' },
+  '18992': { id: 'aleague_w', name: 'A-League Women', country: 'Australia', flag: '🇦🇺', category: 'Asia' },
+  '8316': { id: 'india_i_league', name: 'I-League', country: 'India', flag: '🇮🇳', category: 'Asia' },
+  '18505': { id: 'india_isl', name: 'Indian Super League', country: 'India', flag: '🇮🇳', category: 'Asia' },
+
+  // International & Tournaments
+  '606': { id: 'worldcup', name: 'FIFA World Cup', country: 'International', flag: '🌍', category: 'International' },
+  '795': { id: 'womens_worldcup', name: "FIFA Women's World Cup", country: 'International', flag: '🌍', category: 'International' },
+  '3922': { id: 'friendly_m', name: 'International Friendly', country: 'International', flag: '🌍', category: 'International' },
+  '3923': { id: 'friendly_w', name: "Women's Int Friendly", country: 'International', flag: '🌍', category: 'International' },
+  '20865': { id: 'u17_worldcup', name: 'FIFA U-17 World Cup', country: 'International', flag: '🌍', category: 'International' },
+};
 
 interface EspnCacheEntry {
   timestamp: number;
@@ -46,7 +105,7 @@ interface EspnCacheEntry {
 }
 
 const espnCache = new Map<string, EspnCacheEntry>();
-const CACHE_TTL_MS = 60 * 1000; // 60s cache
+const CACHE_TTL_MS = 90 * 1000; // 90 seconds cache
 
 /**
  * Parses ESPN form string (e.g. 'DDDLD' or 'WWDLW') into FormResult array
@@ -61,7 +120,253 @@ function parseForm(rawForm?: string): FormResult[] {
 }
 
 /**
- * Fetches real matches across worldwide leagues from ESPN's zero-auth public scoreboard API
+ * Resolves competition metadata from an ESPN event
+ */
+function resolveCompetitionFromEvent(event: any): Competition {
+  // 1. Try to extract numeric league ID from UID pattern: s:600~l:700~e:...
+  const uidMatch = event.uid?.match(/~l:([0-9]+)~/);
+  const leagueIdNum = uidMatch ? uidMatch[1] : null;
+
+  if (leagueIdNum && ESPN_LEAGUES_BY_ID[leagueIdNum]) {
+    return ESPN_LEAGUES_BY_ID[leagueIdNum];
+  }
+
+  // 2. Try to parse league slug or clean name
+  const rawSlug = event.season?.slug || '';
+  let cleanName = rawSlug
+    .replace(/^[0-9]{4}-[0-9]{2}-/, '')
+    .replace(/^[0-9]{4}-/, '')
+    .replace(/-/g, ' ');
+
+  // Capitalize words
+  if (cleanName && cleanName !== 'regular season' && cleanName !== 'first round') {
+    cleanName = cleanName
+      .split(' ')
+      .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+
+    return {
+      id: `espn-lg-${leagueIdNum || rawSlug || 'generic'}`,
+      name: cleanName,
+      country: cleanName.includes('English')
+        ? 'England'
+        : cleanName.includes('Spanish')
+        ? 'Spain'
+        : cleanName.includes('German')
+        ? 'Germany'
+        : cleanName.includes('Italian')
+        ? 'Italy'
+        : cleanName.includes('French')
+        ? 'France'
+        : cleanName.includes('Scottish')
+        ? 'Scotland'
+        : 'World Soccer',
+      flag: '⚽',
+      category: 'Domestic',
+    };
+  }
+
+  // 3. Fallback based on team links if present
+  return {
+    id: `espn-lg-${leagueIdNum || 'all'}`,
+    name: 'Worldwide Fixtures',
+    country: 'International',
+    flag: '🌍',
+    category: 'Domestic',
+  };
+}
+
+/**
+ * Parses a single ESPN event into our standard Match interface
+ */
+function parseEspnEvent(event: any, dateStr: string): Match | null {
+  const comp = event.competitions?.[0];
+  if (!comp || !Array.isArray(comp.competitors) || comp.competitors.length < 2) {
+    return null;
+  }
+
+  const homeComp = comp.competitors.find((c: any) => c.homeAway === 'home') || comp.competitors[0];
+  const awayComp = comp.competitors.find((c: any) => c.homeAway === 'away') || comp.competitors[1];
+
+  if (!homeComp?.team || !awayComp?.team) return null;
+
+  // Resolve competition
+  const competition = resolveCompetitionFromEvent(event);
+
+  // Parse status
+  let status: Match['status'] = 'SCHEDULED';
+  const stateName = comp.status?.type?.name || '';
+  const state = comp.status?.type?.state || 'pre';
+  const shortDetail = comp.status?.type?.shortDetail || '';
+  const displayClock = comp.status?.displayClock || '';
+
+  let minute: number | undefined = undefined;
+  let livePeriod: string | undefined = undefined;
+
+  if (state === 'in') {
+    if (stateName.includes('HALFTIME') || stateName.includes('HT')) {
+      status = 'HT';
+      livePeriod = 'HT';
+    } else {
+      status = 'LIVE';
+      livePeriod = stateName.includes('SECOND') ? '2H' : '1H';
+      const parsedMin = parseInt(displayClock.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(parsedMin)) {
+        minute = parsedMin;
+      }
+    }
+  } else if (state === 'post') {
+    status = 'FINISHED';
+  } else if (stateName.includes('POSTPONED') || stateName.includes('CANCELLED')) {
+    status = 'POSTPONED';
+  }
+
+  // Kickoff time formatted nicely
+  const eventDateStr = event.date || '';
+  let kickoffTime = '15:00';
+  if (eventDateStr.length >= 16) {
+    try {
+      const d = new Date(eventDateStr);
+      kickoffTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch {
+      kickoffTime = eventDateStr.substring(11, 16);
+    }
+  }
+
+  // Scores
+  const homeScore = parseInt(homeComp.score || '0', 10) || 0;
+  const awayScore = parseInt(awayComp.score || '0', 10) || 0;
+
+  // Form and records
+  const homeForm = parseForm(homeComp.form);
+  const awayForm = parseForm(awayComp.form);
+
+  // Calculate attack/defense ratings
+  const homeWins = homeForm.filter(f => f === 'W').length;
+  const awayWins = awayForm.filter(f => f === 'W').length;
+  const homeLosses = homeForm.filter(f => f === 'L').length;
+  const awayLosses = awayForm.filter(f => f === 'L').length;
+
+  const homeAttack = Math.min(95, Math.max(65, 76 + homeWins * 4 - homeLosses * 2));
+  const homeDefense = Math.min(95, Math.max(62, 74 + homeWins * 3 - homeLosses * 3));
+  const awayAttack = Math.min(95, Math.max(65, 73 + awayWins * 4 - awayLosses * 2));
+  const awayDefense = Math.min(95, Math.max(62, 71 + awayWins * 3 - awayLosses * 3));
+
+  // Team logos from ESPN CDN
+  const homeLogo = homeComp.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp.team.id}.png`;
+  const awayLogo = awayComp.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp.team.id}.png`;
+
+  const homeTeam: Team = {
+    id: `espn-team-${homeComp.team.id}`,
+    name: homeComp.team.displayName || homeComp.team.name || 'Home Club',
+    shortName: homeComp.team.shortDisplayName || homeComp.team.abbreviation || homeComp.team.name || 'Home',
+    crest: homeLogo,
+    leaguePosition: 5,
+    points: 25,
+    played: 12,
+    form: homeForm,
+    attackRating: homeAttack,
+    defenseRating: homeDefense,
+    possessionAvg: 53,
+    homeAdvantageFactor: 1.18,
+    avgGoalsScored: 1.6,
+    avgGoalsConceded: 1.1,
+    cleanSheets: 4,
+    tacticalStyle: 'Structured 4-3-3 Transition Play',
+    keyInjuries: [],
+  };
+
+  const awayTeam: Team = {
+    id: `espn-team-${awayComp.team.id}`,
+    name: awayComp.team.displayName || awayComp.team.name || 'Away Club',
+    shortName: awayComp.team.shortDisplayName || awayComp.team.abbreviation || awayComp.team.name || 'Away',
+    crest: awayLogo,
+    leaguePosition: 8,
+    points: 19,
+    played: 12,
+    form: awayForm,
+    attackRating: awayAttack,
+    defenseRating: awayDefense,
+    possessionAvg: 47,
+    homeAdvantageFactor: 1.0,
+    avgGoalsScored: 1.2,
+    avgGoalsConceded: 1.4,
+    cleanSheets: 3,
+    tacticalStyle: 'Compact 4-4-2 Counter Play',
+    keyInjuries: [],
+  };
+
+  const venueName = comp.venue?.fullName
+    ? `${comp.venue.fullName}${comp.venue.address?.city ? `, ${comp.venue.address.city}` : ''}`
+    : 'Stadium Venue';
+
+  const referee: Referee = {
+    name: 'Match Official',
+    country: competition.country,
+    matchesOfficiated: 16,
+    foulsPerGame: 22.4,
+    yellowCardsPerGame: 3.8,
+    redCardsTotal: 2,
+    penaltiesPerGame: 0.32,
+    strictness: 'BALANCED',
+    notes: `Official assigned for ${competition.name}.`,
+  };
+
+  const h2h: H2HSummary = {
+    totalPlayed: 6,
+    homeWins: 3,
+    draws: 2,
+    awayWins: 1,
+    avgGoalsPerMatch: 2.6,
+    bothTeamsScoredCount: 4,
+    recentMatches: [
+      {
+        date: '2026-03-12',
+        homeTeam: homeTeam.name,
+        awayTeam: awayTeam.name,
+        homeScore: 2,
+        awayScore: 1,
+        competition: competition.name,
+      },
+      {
+        date: '2025-11-04',
+        homeTeam: awayTeam.name,
+        awayTeam: homeTeam.name,
+        homeScore: 1,
+        awayScore: 1,
+        competition: competition.name,
+      },
+    ],
+  };
+
+  // Full Mathematical Algorithmic Predictions
+  const predictions = calculateMatchPredictions(homeTeam, awayTeam, referee, h2h);
+
+  return {
+    id: `espn-${event.id}`,
+    competition,
+    date: dateStr,
+    kickoffTime,
+    status,
+    minute,
+    livePeriod: livePeriod || (status === 'FINISHED' ? 'FT' : shortDetail),
+    homeTeam,
+    awayTeam,
+    scores: {
+      home: homeScore,
+      away: awayScore,
+    },
+    venue: venueName,
+    referee,
+    h2h,
+    predictions,
+    isFavorite: false,
+  };
+}
+
+/**
+ * Fetches real matches across all worldwide leagues from ESPN's zero-auth public scoreboard API
+ * Calls ESPN's master all/scoreboard feed returning 200+ global fixtures per day!
  * @param dateStr Format: YYYY-MM-DD
  */
 export async function fetchRealMatchesFromEspn(dateStr: string): Promise<Match[]> {
@@ -74,220 +379,69 @@ export async function fetchRealMatchesFromEspn(dateStr: string): Promise<Match[]
   // Convert date 'YYYY-MM-DD' to ESPN format 'YYYYMMDD'
   const espnDate = dateStr.replace(/-/g, '');
 
-  const leaguePromises = ESPN_LEAGUES.map(async (leagueDef) => {
+  try {
+    // 1. Query ESPN Master Global Scoreboard with limit=500 to fetch ALL global leagues in one request
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates=${espnDate}&limit=500`;
+    const res = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const events = json.events || [];
+
+      if (Array.isArray(events) && events.length > 0) {
+        const parsedMatches: Match[] = [];
+
+        for (const event of events) {
+          const m = parseEspnEvent(event, dateStr);
+          if (m) {
+            parsedMatches.push(m);
+          }
+        }
+
+        if (parsedMatches.length > 0) {
+          espnCache.set(dateStr, {
+            timestamp: Date.now(),
+            data: parsedMatches,
+          });
+          return parsedMatches;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed master ESPN soccer feed, trying individual fallback:', err);
+  }
+
+  // 2. Fallback to individual popular leagues if master feed had an issue
+  const fallbackCodes = ['eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1', 'uefa.champions', 'usa.1', 'mex.1', 'saudi', 'por.1'];
+  const fallbackPromises = fallbackCodes.map(async code => {
     try {
-      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueDef.code}/scoreboard?dates=${espnDate}`;
+      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${code}/scoreboard?dates=${espnDate}`;
       const res = await fetch(url, {
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       });
-
       if (!res.ok) return [];
-
       const json = await res.json();
-      const events = json.events || [];
-      if (!Array.isArray(events) || events.length === 0) return [];
-
-      const parsedMatches: Match[] = [];
-
-      for (const event of events) {
-        const comp = event.competitions?.[0];
-        if (!comp || !Array.isArray(comp.competitors) || comp.competitors.length < 2) continue;
-
-        const homeComp = comp.competitors.find((c: any) => c.homeAway === 'home') || comp.competitors[0];
-        const awayComp = comp.competitors.find((c: any) => c.homeAway === 'away') || comp.competitors[1];
-
-        if (!homeComp?.team || !awayComp?.team) continue;
-
-        // Parse status
-        let status: Match['status'] = 'SCHEDULED';
-        const stateName = comp.status?.type?.name || '';
-        const state = comp.status?.type?.state || 'pre';
-        const shortDetail = comp.status?.type?.shortDetail || '';
-        const displayClock = comp.status?.displayClock || '';
-
-        let minute: number | undefined = undefined;
-        let livePeriod: string | undefined = undefined;
-
-        if (state === 'in') {
-          if (stateName.includes('HALFTIME') || stateName.includes('HT')) {
-            status = 'HT';
-            livePeriod = 'HT';
-          } else {
-            status = 'LIVE';
-            livePeriod = stateName.includes('SECOND') ? '2H' : '1H';
-            const parsedMin = parseInt(displayClock.replace(/[^0-9]/g, ''), 10);
-            if (!isNaN(parsedMin)) {
-              minute = parsedMin;
-            }
-          }
-        } else if (state === 'post') {
-          status = 'FINISHED';
-        } else if (stateName.includes('POSTPONED') || stateName.includes('CANCELLED')) {
-          status = 'POSTPONED';
-        }
-
-        // Kickoff time
-        const eventDateStr = event.date || '';
-        const kickoffTime = eventDateStr.length >= 16 ? eventDateStr.substring(11, 16) : '15:00';
-
-        // Scores
-        const homeScore = parseInt(homeComp.score || '0', 10) || 0;
-        const awayScore = parseInt(awayComp.score || '0', 10) || 0;
-
-        // Form and records
-        const homeForm = parseForm(homeComp.form);
-        const awayForm = parseForm(awayComp.form);
-
-        // Calculate attack/defense strength ratings from stats or standings
-        const homeWins = homeForm.filter(f => f === 'W').length;
-        const awayWins = awayForm.filter(f => f === 'W').length;
-        const homeLosses = homeForm.filter(f => f === 'L').length;
-        const awayLosses = awayForm.filter(f => f === 'L').length;
-
-        const homeAttack = Math.min(95, Math.max(65, 75 + homeWins * 4 - homeLosses * 2));
-        const homeDefense = Math.min(95, Math.max(62, 74 + homeWins * 3 - homeLosses * 3));
-        const awayAttack = Math.min(95, Math.max(65, 73 + awayWins * 4 - awayLosses * 2));
-        const awayDefense = Math.min(95, Math.max(62, 71 + awayWins * 3 - awayLosses * 3));
-
-        // Team logos from ESPN CDN
-        const homeLogo = homeComp.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp.team.id}.png`;
-        const awayLogo = awayComp.team.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp.team.id}.png`;
-
-        const homeTeam: Team = {
-          id: `espn-team-${homeComp.team.id}`,
-          name: homeComp.team.displayName || homeComp.team.name || 'Home Club',
-          shortName: homeComp.team.shortDisplayName || homeComp.team.abbreviation || homeComp.team.name || 'Home',
-          crest: homeLogo,
-          leaguePosition: 6,
-          points: 24,
-          played: 12,
-          form: homeForm,
-          attackRating: homeAttack,
-          defenseRating: homeDefense,
-          possessionAvg: 52,
-          homeAdvantageFactor: 1.18,
-          avgGoalsScored: 1.6,
-          avgGoalsConceded: 1.1,
-          cleanSheets: 4,
-          tacticalStyle: 'Structured 4-3-3 Transition Play',
-          keyInjuries: [],
-        };
-
-        const awayTeam: Team = {
-          id: `espn-team-${awayComp.team.id}`,
-          name: awayComp.team.displayName || awayComp.team.name || 'Away Club',
-          shortName: awayComp.team.shortDisplayName || awayComp.team.abbreviation || awayComp.team.name || 'Away',
-          crest: awayLogo,
-          leaguePosition: 8,
-          points: 21,
-          played: 12,
-          form: awayForm,
-          attackRating: awayAttack,
-          defenseRating: awayDefense,
-          possessionAvg: 48,
-          homeAdvantageFactor: 1.18,
-          avgGoalsScored: 1.4,
-          avgGoalsConceded: 1.3,
-          cleanSheets: 3,
-          tacticalStyle: 'Counter 4-2-3-1 High Press',
-          keyInjuries: [],
-        };
-
-        // Venue & referee
-        const venueName = comp.venue?.fullName
-          ? `${comp.venue.fullName}${comp.venue.address?.city ? `, ${comp.venue.address.city}` : ''}`
-          : 'Stadium Venue';
-
-        const referee: Referee = {
-          name: 'Match Official',
-          country: leagueDef.country,
-          matchesOfficiated: 15,
-          foulsPerGame: 22.4,
-          yellowCardsPerGame: 3.8,
-          redCardsTotal: 2,
-          penaltiesPerGame: 0.32,
-          strictness: 'BALANCED',
-          notes: `Official assigned for ${leagueDef.name}.`,
-        };
-
-        const competition: Competition = {
-          id: leagueDef.id,
-          name: json.leagues?.[0]?.name || leagueDef.name,
-          country: leagueDef.country,
-          flag: leagueDef.flag,
-          category: leagueDef.category,
-        };
-
-        const h2h: H2HSummary = {
-          totalPlayed: 6,
-          homeWins: 3,
-          draws: 2,
-          awayWins: 1,
-          avgGoalsPerMatch: 2.6,
-          bothTeamsScoredCount: 4,
-          recentMatches: [
-            {
-              date: '2026-03-12',
-              homeTeam: homeTeam.name,
-              awayTeam: awayTeam.name,
-              homeScore: 2,
-              awayScore: 1,
-              competition: competition.name,
-            },
-            {
-              date: '2025-11-04',
-              homeTeam: awayTeam.name,
-              awayTeam: homeTeam.name,
-              homeScore: 1,
-              awayScore: 1,
-              competition: competition.name,
-            },
-          ],
-        };
-
-        // Algorithmic Mathematical Predictions
-        const predictions = calculateMatchPredictions(homeTeam, awayTeam, referee, h2h);
-
-        parsedMatches.push({
-          id: `espn-${event.id}`,
-          competition,
-          date: dateStr,
-          kickoffTime,
-          status,
-          minute,
-          livePeriod: livePeriod || (status === 'FINISHED' ? 'FT' : shortDetail),
-          homeTeam,
-          awayTeam,
-          scores: {
-            home: homeScore,
-            away: awayScore,
-          },
-          venue: venueName,
-          referee,
-          h2h,
-          predictions,
-          isFavorite: false,
-        });
-      }
-
-      return parsedMatches;
+      return (json.events || []).map((ev: any) => parseEspnEvent(ev, dateStr)).filter(Boolean) as Match[];
     } catch {
       return [];
     }
   });
 
-  const results = await Promise.all(leaguePromises);
-  const allMatches = results.flat();
-
-  if (allMatches.length > 0) {
+  const fallbackResults = (await Promise.all(fallbackPromises)).flat();
+  if (fallbackResults.length > 0) {
     espnCache.set(dateStr, {
       timestamp: Date.now(),
-      data: allMatches,
+      data: fallbackResults,
     });
   }
 
-  return allMatches;
+  return fallbackResults;
 }
