@@ -119,11 +119,142 @@ function parseForm(rawForm?: string): FormResult[] {
   return valid.length > 0 ? valid.slice(-5) : ['W', 'D', 'W', 'L', 'D'];
 }
 
+export const ESPN_LEAGUE_ORDER_RANK: Record<string, number> = {
+  // Tier 1: Flagship Top 5 European Leagues & UEFA Continental
+  'pl': 1,
+  'laliga': 2,
+  'seriea': 3,
+  'bundesliga': 4,
+  'ligue1': 5,
+  'ucl': 6,
+  'uel': 7,
+  'uecl': 8,
+
+  // Tier 2: Premier Domestic Cups & Major Global Leagues
+  'mls': 9,
+  'facup': 10,
+  'champ': 11,
+  'carabao': 12,
+  'ligamx': 13,
+  'eredivisie': 14,
+  'primeira': 15,
+  'saudi': 16,
+  'superlig': 17,
+  'scotland': 18,
+  'belgium': 19,
+  'unl': 20,
+  'worldcup': 21,
+
+  // Tier 3: Secondary Major European & Americas Divisions
+  'argentina': 22,
+  'brazil_b': 23,
+  'copadelrey': 24,
+  'dfbpokal': 25,
+  'coppaitalia': 26,
+  'coupefrance': 27,
+  'segunda': 28,
+  'serieb': 29,
+  'bundesliga2': 30,
+  'ligue2': 31,
+  'scot_champ': 32,
+  'jleague': 33,
+  'aleague': 34,
+  'colombia': 35,
+  'chile': 36,
+  'peru': 37,
+  'ecuador': 38,
+  'allsvenskan': 39,
+  'eliteserien': 40,
+  'superliga_dk': 41,
+  'austria': 42,
+  'greece': 43,
+  'russia': 44,
+
+  // Tier 4: Women's Major & Lower Tiers
+  'wsl': 45,
+  'nwsl': 46,
+  'ligaf': 47,
+  'premiere_ligue_fr': 48,
+  'uwcl': 49,
+  'natleague': 50,
+};
+
 /**
- * Resolves competition metadata from an ESPN event
+ * Returns the ESPN official scoreboard sorting rank for a competition ID
  */
-function resolveCompetitionFromEvent(event: any): Competition {
-  // 1. Try to extract numeric league ID from UID pattern: s:600~l:700~e:...
+export function getEspnLeagueSortRank(compId: string, compName?: string): number {
+  if (ESPN_LEAGUE_ORDER_RANK[compId] !== undefined) {
+    return ESPN_LEAGUE_ORDER_RANK[compId];
+  }
+  const lower = (compName || compId).toLowerCase();
+  if (lower.includes('premier league') || lower.includes('epl')) return 1.5;
+  if (lower.includes('la liga') || lower.includes('laliga')) return 2.5;
+  if (lower.includes('serie a')) return 3.5;
+  if (lower.includes('bundesliga') && !lower.includes('2.')) return 4.5;
+  if (lower.includes('ligue 1')) return 5.5;
+  if (lower.includes('champions league')) return 6.5;
+  if (lower.includes('europa league')) return 7.5;
+  if (lower.includes('mls') || lower.includes('major league soccer')) return 9.5;
+  if (lower.includes('fa cup')) return 10.5;
+  if (lower.includes('championship')) return 11.5;
+  if (lower.includes('carabao') || lower.includes('efl cup')) return 12.5;
+  if (lower.includes('ncaa') || lower.includes('college')) return 999;
+  return 100;
+}
+
+/**
+ * Resolves competition metadata from an ESPN event, prioritizing altGameNote and canonical IDs
+ */
+function resolveCompetitionFromEvent(event: any, comp?: any): Competition {
+  // 1. Try matching by ESPN's altGameNote if available (most reliable and human-readable)
+  const altNote = ((comp?.altGameNote as string) || '').toLowerCase().trim();
+  if (altNote) {
+    if (altNote.includes('premier league') || altNote.includes('epl')) return ESPN_LEAGUES_BY_ID['700'];
+    if (altNote.includes('laliga 2') || altNote.includes('segunda')) return ESPN_LEAGUES_BY_ID['3921'];
+    if (altNote.includes('laliga') || altNote.includes('la liga')) return ESPN_LEAGUES_BY_ID['740'];
+    if (altNote.includes('serie b')) return ESPN_LEAGUES_BY_ID['3931'];
+    if (altNote.includes('serie a')) return ESPN_LEAGUES_BY_ID['730'];
+    if (altNote.includes('2. bundesliga')) return ESPN_LEAGUES_BY_ID['3927'];
+    if (altNote.includes('bundesliga')) return ESPN_LEAGUES_BY_ID['720'];
+    if (altNote.includes('ligue 2')) return ESPN_LEAGUES_BY_ID['3926'];
+    if (altNote.includes('ligue 1')) return ESPN_LEAGUES_BY_ID['710'];
+    if (altNote.includes('mls') || altNote.includes('major league soccer')) return ESPN_LEAGUES_BY_ID['770'];
+    if (altNote.includes('fa cup')) return ESPN_LEAGUES_BY_ID['3918'];
+    if (altNote.includes('championship')) return ESPN_LEAGUES_BY_ID['3914'];
+    if (altNote.includes('carabao') || altNote.includes('efl cup')) return ESPN_LEAGUES_BY_ID['3920'];
+    if (altNote.includes('saudi')) return ESPN_LEAGUES_BY_ID['21231'];
+    if (altNote.includes('portugal') || altNote.includes('primeira')) return ESPN_LEAGUES_BY_ID['715'];
+    if (altNote.includes('eredivisie')) return ESPN_LEAGUES_BY_ID['725'];
+    if (altNote.includes('spfl premiership') || altNote.includes('scottish premiership')) return ESPN_LEAGUES_BY_ID['735'];
+    if (altNote.includes('spfl championship') || altNote.includes('scottish championship')) return ESPN_LEAGUES_BY_ID['3940'];
+    if (altNote.includes('turkish') || altNote.includes('super lig')) return ESPN_LEAGUES_BY_ID['3946'];
+    if (altNote.includes('belgian')) return ESPN_LEAGUES_BY_ID['3901'];
+    if (altNote.includes('argentine') || altNote.includes('lpf')) return ESPN_LEAGUES_BY_ID['745'];
+    if (altNote.includes('brazil serie b')) return ESPN_LEAGUES_BY_ID['4007'];
+    if (altNote.includes('j1 league') || altNote.includes('jleague')) return ESPN_LEAGUES_BY_ID['750'];
+    if (altNote.includes('peru') || altNote.includes('liga 1')) return ESPN_LEAGUES_BY_ID['670'];
+    if (altNote.includes('colombian') || altNote.includes('primera a')) return ESPN_LEAGUES_BY_ID['650'];
+    if (altNote.includes('liga mx')) return ESPN_LEAGUES_BY_ID['760'];
+    if (altNote.includes('a-league')) return ESPN_LEAGUES_BY_ID['3906'];
+    if (altNote.includes('liga f')) return ESPN_LEAGUES_BY_ID['20956'];
+    if (altNote.includes('première ligue')) return ESPN_LEAGUES_BY_ID['20955'];
+    if (altNote.includes('russian')) return ESPN_LEAGUES_BY_ID['3939'];
+    if (altNote.includes('champions league')) return ESPN_LEAGUES_BY_ID['775'];
+    if (altNote.includes('europa league')) return ESPN_LEAGUES_BY_ID['776'];
+    if (altNote.includes('conference league')) return ESPN_LEAGUES_BY_ID['20296'];
+    if (altNote.includes('nations league')) return ESPN_LEAGUES_BY_ID['2395'];
+    if (altNote.includes('ncaa') || altNote.includes('college')) {
+      return {
+        id: 'college-soccer',
+        name: comp?.altGameNote || 'College Soccer',
+        country: 'USA',
+        flag: '🎓',
+        category: 'Americas',
+      };
+    }
+  }
+
+  // 2. Try to extract numeric league ID from UID pattern: s:600~l:700~e:...
   const uidMatch = event.uid?.match(/~l:([0-9]+)~/);
   const leagueIdNum = uidMatch ? uidMatch[1] : null;
 
@@ -131,14 +262,37 @@ function resolveCompetitionFromEvent(event: any): Competition {
     return ESPN_LEAGUES_BY_ID[leagueIdNum];
   }
 
-  // 2. Try to parse league slug or clean name
+  // 3. Try to parse clean name from altGameNote or season slug
+  const rawNote = comp?.altGameNote || '';
+  if (rawNote) {
+    return {
+      id: `espn-lg-${leagueIdNum || rawNote.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+      name: rawNote,
+      country: rawNote.includes('English')
+        ? 'England'
+        : rawNote.includes('Spanish')
+        ? 'Spain'
+        : rawNote.includes('German')
+        ? 'Germany'
+        : rawNote.includes('Italian')
+        ? 'Italy'
+        : rawNote.includes('French')
+        ? 'France'
+        : rawNote.includes('Scottish')
+        ? 'Scotland'
+        : 'World Soccer',
+      flag: '⚽',
+      category: 'Domestic',
+    };
+  }
+
+  // 4. Try to parse league slug
   const rawSlug = event.season?.slug || '';
   let cleanName = rawSlug
     .replace(/^[0-9]{4}-[0-9]{2}-/, '')
     .replace(/^[0-9]{4}-/, '')
     .replace(/-/g, ' ');
 
-  // Capitalize words
   if (cleanName && cleanName !== 'regular season' && cleanName !== 'first round') {
     cleanName = cleanName
       .split(' ')
@@ -166,7 +320,7 @@ function resolveCompetitionFromEvent(event: any): Competition {
     };
   }
 
-  // 3. Fallback based on team links if present
+  // 5. Fallback
   return {
     id: `espn-lg-${leagueIdNum || 'all'}`,
     name: 'Worldwide Fixtures',
@@ -190,8 +344,8 @@ function parseEspnEvent(event: any, dateStr: string): Match | null {
 
   if (!homeComp?.team || !awayComp?.team) return null;
 
-  // Resolve competition
-  const competition = resolveCompetitionFromEvent(event);
+  // Resolve competition with altGameNote awareness
+  const competition = resolveCompetitionFromEvent(event, comp);
 
   // Parse status
   let status: Match['status'] = 'SCHEDULED';

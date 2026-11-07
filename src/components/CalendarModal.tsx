@@ -48,16 +48,16 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
   const todayIso = '2026-11-07';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-sm bg-[#121c2e] border border-slate-700/80 rounded-3xl p-5 shadow-2xl">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-sm bg-white dark:bg-[#121c2e] border border-slate-200 dark:border-slate-700/80 rounded-3xl p-5 shadow-2xl transition-colors duration-150">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-sky-400" />
-            <h3 className="text-sm font-bold text-white">Select Match Date</h3>
+            <CalendarIcon className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Select Match Date</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -72,8 +72,8 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
             }}
             className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
               selectedDate === '2026-11-06'
-                ? 'bg-sky-600 text-white border-sky-500'
-                : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
+                ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
+                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             Yesterday (Results)
@@ -85,8 +85,8 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
             }}
             className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
               selectedDate === '2026-11-07'
-                ? 'bg-sky-600 text-white border-sky-500'
-                : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
+                ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
+                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             Today (Live)
@@ -98,8 +98,8 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
             }}
             className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
               selectedDate === '2026-11-08'
-                ? 'bg-sky-600 text-white border-sky-500'
-                : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
+                ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
+                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             Tomorrow
@@ -110,14 +110,14 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
         <div className="flex items-center justify-between py-2 px-1">
           <button
             onClick={handlePrevMonth}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs font-bold text-slate-200">{monthName}</span>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{monthName}</span>
           <button
             onClick={handleNextMonth}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -159,10 +159,10 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
                   isSelected
                     ? 'bg-sky-600 text-white font-bold shadow-md shadow-sky-600/30'
                     : isToday
-                    ? 'bg-slate-800 text-sky-400 border border-sky-500/40 font-bold'
+                    ? 'bg-sky-50 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-sky-400/50 dark:border-sky-500/40 font-bold'
                     : isPast
-                    ? 'text-slate-300 hover:bg-slate-800/60'
-                    : 'text-slate-200 hover:bg-slate-800'
+                    ? 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                    : 'text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <span>{dayNum}</span>
@@ -171,14 +171,14 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           })}
         </div>
 
-        <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-          <span>Selected: <strong className="text-white font-mono">{selectedDate}</strong></span>
+        <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+          <span>Selected: <strong className="text-slate-900 dark:text-white font-mono">{selectedDate}</strong></span>
           <button
             onClick={() => {
               onSelectDate(todayIso);
               onClose();
             }}
-            className="text-sky-400 hover:underline font-semibold"
+            className="text-sky-600 dark:text-sky-400 hover:underline font-semibold"
           >
             Reset to Today
           </button>

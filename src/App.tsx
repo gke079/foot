@@ -16,7 +16,28 @@ import { LeaguesMenuModal } from './components/LeaguesMenuModal';
 import { PredictionMarketSelector } from './components/PredictionMarketSelector';
 import { RankedMatchCard } from './components/RankedMatchCard';
 import { PREDICTION_MARKET_OPTIONS, getMarketProbability } from './utils/predictionEngine';
-import { Zap, Sparkles, Star, Bell, Calendar as CalendarIcon, Filter, Globe, RefreshCw, AlertCircle, ArrowDownWideNarrow, SlidersHorizontal, LayoutList, LayoutGrid, Award } from 'lucide-react';
+import { getEspnLeagueSortRank } from './services/espnSoccer';
+import {
+  Zap,
+  Sparkles,
+  Star,
+  Bell,
+  Calendar as CalendarIcon,
+  Filter,
+  Globe,
+  RefreshCw,
+  AlertCircle,
+  ArrowDownWideNarrow,
+  SlidersHorizontal,
+  LayoutList,
+  LayoutGrid,
+  Award,
+  ChevronsUpDown,
+  ChevronsDownUp,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 export default function App() {
   // Current active date (default to today: 2026-11-07)
@@ -33,10 +54,35 @@ export default function App() {
   const [selectedPredictionMarket, setSelectedPredictionMarket] = useState<PredictionMarketFilter>('ALL');
   const [onlyHighProbability, setOnlyHighProbability] = useState<boolean>(false);
   const [minProbabilityThreshold, setMinProbabilityThreshold] = useState<number>(0);
-  const [rankingLayoutMode, setRankingLayoutMode] = useState<'RANKED_LIST' | 'LEAGUE_GROUPS'>('RANKED_LIST');
+  const [rankingLayoutMode, setRankingLayoutMode] = useState<'RANKED_LIST' | 'LEAGUE_GROUPS'>('LEAGUE_GROUPS');
 
   // Bottom Navigation state
   const [bottomNavTab, setBottomNavTab] = useState<NavTab>('SCORES');
+
+  // Theme (Dark or Light)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('apex_theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch {}
+    return 'dark';
+  });
+
+  // Keep <html> dark class synced with theme state and persist to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('apex_theme', theme);
+    } catch {}
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = (targetTheme?: 'dark' | 'light') => {
+    setTheme(prev => targetTheme ?? (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   // Favorites
   const [favoriteMatchIds, setFavoriteMatchIds] = useState<Set<string>>(() => {
@@ -112,10 +158,20 @@ export default function App() {
   const [expandedLeagues, setExpandedLeagues] = useState<Record<string, boolean>>({
     pl: true,
     laliga: true,
-    ucl: true,
     seriea: true,
     bundesliga: true,
     ligue1: true,
+    ucl: true,
+    uel: true,
+    mls: true,
+    facup: true,
+    champ: true,
+    saudi: true,
+    primeira: true,
+    eredivisie: true,
+    superlig: true,
+    scotland: true,
+    belgium: true,
   });
 
   // Save favorites to localStorage
@@ -150,7 +206,7 @@ export default function App() {
   const handleToggleLeagueExpand = (leagueId: string) => {
     setExpandedLeagues(prev => ({
       ...prev,
-      [leagueId]: !prev[leagueId],
+      [leagueId]: !(prev[leagueId] ?? true),
     }));
   };
 
@@ -327,10 +383,17 @@ export default function App() {
         map.set(m.competition.id, m.competition);
       }
     }
-    return Array.from(map.values());
+    const comps = Array.from(map.values());
+    comps.sort((a, b) => {
+      const rankA = getEspnLeagueSortRank(a.id, a.name);
+      const rankB = getEspnLeagueSortRank(b.id, b.name);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.name.localeCompare(b.name);
+    });
+    return comps;
   }, [rawMatchesForDate]);
 
-  // Group matches by Competition
+  // Group matches by Competition, arranged in ESPN official league priority order
   const groupedMatches = useMemo(() => {
     const map = new Map<string, { competition: Match['competition']; matches: Match[] }>();
 
@@ -342,14 +405,60 @@ export default function App() {
       map.get(compId)!.matches.push(match);
     }
 
-    return Array.from(map.values());
-  }, [displayedMatches]);
+    const groups = Array.from(map.values());
+
+    // 1. Sort matches WITHIN each league:
+    // If a prediction market is selected: sort by that market probability descending
+    // Otherwise (standard ESPN): LIVE/HT first, then kickoff time ascending, then FINISHED
+    for (const group of groups) {
+      group.matches.sort((a, b) => {
+        if (selectedPredictionMarket !== 'ALL') {
+          const probA = getMarketProbability(a, selectedPredictionMarket);
+          const probB = getMarketProbability(b, selectedPredictionMarket);
+          if (probA !== probB) return probB - probA;
+        }
+
+        // Live matches first
+        const statusPriority = (s: Match['status']) => (s === 'LIVE' || s === 'HT' ? 0 : s === 'SCHEDULED' ? 1 : 2);
+        const prioA = statusPriority(a.status);
+        const prioB = statusPriority(b.status);
+        if (prioA !== prioB) return prioA - prioB;
+
+        // Kickoff time ascending (e.g. 12:30 before 15:00)
+        return (a.kickoffTime || '').localeCompare(b.kickoffTime || '');
+      });
+    }
+
+    // 2. Sort the LEAGUE ACCORDIONS according to ESPN official scoreboard priority hierarchy
+    groups.sort((a, b) => {
+      const rankA = getEspnLeagueSortRank(a.competition.id, a.competition.name);
+      const rankB = getEspnLeagueSortRank(b.competition.id, b.competition.name);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.competition.name.localeCompare(b.competition.name);
+    });
+
+    return groups;
+  }, [displayedMatches, selectedPredictionMarket]);
+
+  const areAllExpanded = useMemo(() => {
+    if (groupedMatches.length === 0) return true;
+    return groupedMatches.every(g => expandedLeagues[g.competition.id] ?? true);
+  }, [groupedMatches, expandedLeagues]);
+
+  const handleToggleExpandAll = () => {
+    const nextState = !areAllExpanded;
+    const nextMap: Record<string, boolean> = {};
+    for (const g of groupedMatches) {
+      nextMap[g.competition.id] = nextState;
+    }
+    setExpandedLeagues(nextMap);
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const isPastDate = selectedDate < '2026-11-07';
 
   return (
-    <div className="min-h-screen bg-[#0d1422] text-slate-100 flex flex-col font-sans pb-24 selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0d1422] text-slate-900 dark:text-slate-100 flex flex-col font-sans pb-24 selection:bg-sky-500 selection:text-white transition-colors duration-150">
       {/* Top App Bar matching screenshot */}
       <Header
         isLiveOnly={isLiveOnly}
@@ -361,6 +470,8 @@ export default function App() {
         onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
         unreadNotificationsCount={unreadCount}
         onOpenLeaguesModal={() => setIsLeaguesModalOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* SubHeader: All Scores vs My Scores + Team Form Switch + Competitions Pill */}
@@ -400,22 +511,22 @@ export default function App() {
       <div className="max-w-4xl mx-auto w-full px-3 sm:px-4 pt-2.5 flex items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-1.5">
           {isRealData ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-bold text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 font-bold text-[11px]">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Real Games · {dataSource}
             </span>
           ) : apiSportsConfigured ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-950/60 border border-sky-800/60 text-sky-300 font-bold text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-sky-400" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/60 border border-sky-300 dark:border-sky-800/60 text-sky-800 dark:text-sky-300 font-bold text-[11px]">
+              <span className="w-2 h-2 rounded-full bg-sky-500" />
               API-Sports Connected ({dataSource})
             </span>
           ) : (
             <button
               onClick={() => setIsSettingsModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold text-[11px] transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[11px] transition-colors shadow-xs"
               title="Click to view API-Sports setup instructions"
             >
-              <Globe className="w-3.5 h-3.5 text-sky-400" />
+              <Globe className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
               <span>Real Games Engine (API-Sports Ready)</span>
             </button>
           )}
@@ -514,24 +625,24 @@ export default function App() {
       {/* Main Content: Match Accordions or Ranked Feed */}
       <main className="max-w-4xl mx-auto w-full px-2 sm:px-4 py-3 flex-1">
         {selectedPredictionMarket !== 'ALL' && displayedMatches.length > 0 && (
-          <div className="mb-4 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-[#14233c] via-[#162744] to-[#121c2e] border border-sky-800/60 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="mb-4 p-3 sm:p-4 rounded-2xl bg-white dark:bg-gradient-to-r dark:from-[#14233c] dark:via-[#162744] dark:to-[#121c2e] border border-slate-200 dark:border-sky-800/60 shadow-sm dark:shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-xl shrink-0 shadow-inner">
+              <div className="w-10 h-10 rounded-2xl bg-sky-50 dark:bg-sky-500/20 border border-sky-200 dark:border-sky-500/40 flex items-center justify-center text-xl shrink-0 shadow-inner">
                 {PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.icon || '🎯'}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-sm sm:text-base font-extrabold text-white">
+                  <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
                     {PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.label || selectedPredictionMarket}
                   </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-500/40">
                     Highest → Lowest Probability
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Found <strong className="text-white font-mono">{displayedMatches.length}</strong> games on {selectedDate}
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Found <strong className="text-slate-900 dark:text-white font-mono">{displayedMatches.length}</strong> games on {selectedDate}
                   {topMarketProb !== undefined && (
-                    <span> · Top pick: <strong className="text-emerald-300">{topTeamName} ({topMarketProb}%)</strong></span>
+                    <span> · Top pick: <strong className="text-emerald-600 dark:text-emerald-300">{topTeamName} ({topMarketProb}%)</strong></span>
                   )}
                 </p>
               </div>
@@ -539,13 +650,13 @@ export default function App() {
 
             {/* Layout switch button: Ranked Flat List vs Group by League */}
             <div className="flex items-center gap-2 self-start sm:self-auto">
-              <div className="flex items-center bg-[#0d1524] p-1 rounded-xl border border-slate-700/80 text-xs">
+              <div className="flex items-center bg-slate-100 dark:bg-[#0d1524] p-1 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs">
                 <button
                   onClick={() => setRankingLayoutMode('RANKED_LIST')}
                   className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors ${
                     rankingLayoutMode === 'RANKED_LIST'
                       ? 'bg-sky-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                   title="Flat ranked list from #1 down"
                 >
@@ -557,7 +668,7 @@ export default function App() {
                   className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors ${
                     rankingLayoutMode === 'LEAGUE_GROUPS'
                       ? 'bg-sky-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                   title="Group by league"
                 >
@@ -568,7 +679,7 @@ export default function App() {
 
               <button
                 onClick={() => setSelectedPredictionMarket('ALL')}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors"
                 title="Clear prediction sort"
               >
                 ✕ Reset
@@ -578,10 +689,10 @@ export default function App() {
         )}
 
         {displayedMatches.length === 0 ? (
-          <div className="p-12 text-center rounded-3xl bg-[#141f32] border border-slate-800 my-6">
-            <Filter className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-white">No matches found</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+          <div className="p-12 text-center rounded-3xl bg-white dark:bg-[#141f32] border border-slate-200 dark:border-slate-800 my-6 shadow-sm">
+            <Filter className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">No matches found</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
               {selectedPredictionMarket !== 'ALL'
                 ? `No games on this date reached the active threshold for ${PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.label}. Try lowering the minimum probability or switching to All Matches.`
                 : isLiveOnly
@@ -646,27 +757,129 @@ export default function App() {
             ))}
           </div>
         ) : (
-          /* Grouped by League Feed */
-          groupedMatches.map(({ competition, matches }) => {
-            const isSubscribed = subscriptions.some(s => s.leagueId === competition.id && s.enabled);
-            const isExpanded = expandedLeagues[competition.id] ?? true;
+          /* Grouped by League Feed (ESPN Hierarchy) */
+          <div className="space-y-4">
+            {/* ESPN League Navigation & Expand/Collapse toolbar */}
+            <div className="flex flex-col gap-2.5 pb-1">
+              <div className="flex items-center justify-between text-xs px-1">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                    <Layers className="w-4 h-4 text-sky-500" />
+                    <span>Arranged by League (ESPN Order)</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {groupedMatches.length} {groupedMatches.length === 1 ? 'League' : 'Leagues'}
+                  </span>
+                </div>
 
-            return (
-              <LeagueAccordion
-                key={competition.id}
-                competition={competition}
-                matches={matches}
-                isExpanded={isExpanded}
-                onToggleExpand={() => handleToggleLeagueExpand(competition.id)}
-                showTeamForm={showTeamForm}
-                favoriteMatchIds={favoriteMatchIds}
-                onToggleFavorite={toggleFavorite}
-                onSelectMatch={match => setSelectedMatchForDetail(match)}
-                isSubscribedToLeague={isSubscribed}
-                onToggleLeagueNotification={toggleSubscription}
-              />
-            );
-          })
+                <button
+                  onClick={handleToggleExpandAll}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 transition-colors shadow-sm cursor-pointer"
+                  title={areAllExpanded ? 'Collapse all league sections' : 'Expand all league sections'}
+                >
+                  {areAllExpanded ? (
+                    <>
+                      <ChevronsDownUp className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Collapse All</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Expand All</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Quick Jump League Chips */}
+              {groupedMatches.length > 1 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-1">
+                  <button
+                    onClick={() => setSelectedLeagueFilter(null)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                      !selectedLeagueFilter
+                        ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-500'
+                        : 'bg-white dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/80'
+                    }`}
+                  >
+                    All Leagues ({displayedMatches.length})
+                  </button>
+
+                  {groupedMatches.map(({ competition, matches }) => {
+                    const isSelected = selectedLeagueFilter === competition.id;
+                    return (
+                      <button
+                        key={competition.id}
+                        onClick={() => setSelectedLeagueFilter(isSelected ? null : competition.id)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                          isSelected
+                            ? 'bg-sky-600 text-white shadow-sm ring-1 ring-sky-500'
+                            : 'bg-white dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600'
+                        }`}
+                        title={`Filter to ${competition.name}`}
+                      >
+                        {competition.logo ? (
+                          <img
+                            src={competition.logo}
+                            alt=""
+                            className="w-3.5 h-3.5 object-contain"
+                            onError={e => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : competition.flag ? (
+                          <span className="text-xs">{competition.flag}</span>
+                        ) : (
+                          <span className="text-xs">
+                            {competition.country === 'England' ? '🏴󠁧󠁢󠁥󠁮󠁧󠁿' :
+                             competition.country === 'Spain' ? '🇪🇸' :
+                             competition.country === 'Italy' ? '🇮🇹' :
+                             competition.country === 'Germany' ? '🇩🇪' :
+                             competition.country === 'France' ? '🇫🇷' :
+                             competition.country === 'USA' ? '🇺🇸' :
+                             competition.country === 'Europe' ? '🏆' : '⚽'}
+                          </span>
+                        )}
+                        <span>{competition.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                          isSelected
+                            ? 'bg-sky-500 text-white'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                        }`}>
+                          {matches.length}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* League Accordions */}
+            <div className="space-y-3">
+              {groupedMatches.map(({ competition, matches }) => {
+                const isSubscribed = subscriptions.some(s => s.leagueId === competition.id && s.enabled);
+                const isExpanded = expandedLeagues[competition.id] ?? true;
+
+                return (
+                  <LeagueAccordion
+                    key={competition.id}
+                    competition={competition}
+                    matches={matches}
+                    isExpanded={isExpanded}
+                    onToggleExpand={() => handleToggleLeagueExpand(competition.id)}
+                    showTeamForm={showTeamForm}
+                    favoriteMatchIds={favoriteMatchIds}
+                    onToggleFavorite={toggleFavorite}
+                    onSelectMatch={match => setSelectedMatchForDetail(match)}
+                    isSubscribedToLeague={isSubscribed}
+                    onToggleLeagueNotification={toggleSubscription}
+                    activeMarket={selectedPredictionMarket}
+                  />
+                );
+              })}
+            </div>
+          </div>
         )}
       </main>
 
@@ -751,6 +964,8 @@ export default function App() {
         isRealData={isRealData}
         dataSource={dataSource}
         accountNotice={accountNotice}
+        theme={theme}
+        onToggleTheme={toggleTheme}
         onResetData={() => {
           setFavoriteMatchIds(new Set());
           localStorage.removeItem('apex_favorite_matches');

@@ -159,6 +159,8 @@ export interface Competition {
   flag: string;
   category: 'Popular' | 'European' | 'Domestic' | 'Americas' | 'Asia' | 'Africa' | 'International';
   matchCount?: number;
+  logo?: string;
+  emblem?: string;
 }
 
 export interface Match {

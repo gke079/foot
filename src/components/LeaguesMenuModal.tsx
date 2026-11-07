@@ -40,17 +40,17 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md bg-[#121c2e] border border-slate-700/80 rounded-3xl p-5 shadow-2xl space-y-3.5 max-h-[88vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-md bg-white dark:bg-[#121c2e] border border-slate-200 dark:border-slate-700/80 rounded-3xl p-5 shadow-2xl space-y-3.5 max-h-[88vh] flex flex-col transition-colors duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between pb-2 border-b border-slate-800 shrink-0">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-sky-400" />
-            <h3 className="text-sm font-bold text-white">All World Competitions</h3>
+            <Globe className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">All World Competitions</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -64,12 +64,12 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search league or country (e.g. England, Brazil, MLS...)"
-            className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-800 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 border border-slate-200 dark:border-slate-700"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white"
+              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-700 dark:hover:text-white"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -91,8 +91,8 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
               onClick={() => setSelectedRegion(r.id)}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
                 selectedRegion === r.id
-                  ? 'bg-sky-600 text-white'
-                  : 'bg-slate-800/80 text-slate-400 hover:text-white'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700'
               }`}
             >
               {r.label}
@@ -111,7 +111,7 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
             className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-colors text-xs font-bold ${
               selectedLeagueId === null
                 ? 'bg-sky-600 text-white shadow-sm'
-                : 'bg-[#162238] text-slate-200 hover:bg-[#1a2944]'
+                : 'bg-slate-100 dark:bg-[#162238] text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#1a2944] border border-slate-200 dark:border-slate-800'
             }`}
           >
             <span>All Worldwide Leagues ({comps.length})</span>
@@ -130,14 +130,14 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
                 className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-colors text-xs font-bold ${
                   isSelected
                     ? 'bg-sky-600 text-white shadow-sm'
-                    : 'bg-[#162238] text-slate-200 hover:bg-[#1a2944]'
+                    : 'bg-slate-100 dark:bg-[#162238] text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#1a2944] border border-slate-200 dark:border-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">{comp.flag}</span>
                   <div className="text-left">
-                    <span className="block text-white font-bold">{comp.name}</span>
-                    <span className="text-[10px] text-slate-400 block font-normal">{comp.country}</span>
+                    <span className="block text-slate-900 dark:text-white font-bold">{comp.name}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-normal">{comp.country}</span>
                   </div>
                 </div>
                 {isSelected && <Check className="w-4 h-4" />}
@@ -146,7 +146,7 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
           })}
 
           {filtered.length === 0 && (
-            <div className="py-8 text-center text-xs text-slate-400">
+            <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
               No leagues found matching your search.
             </div>
           )}

@@ -64,28 +64,28 @@ export const MatchAnalysisModal: React.FC<MatchAnalysisModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-[#121c2e] border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 dark:bg-black/80 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-[#121c2e] border border-slate-200 dark:border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col transition-colors duration-150">
         {/* Top Header Bar */}
-        <div className="px-4 py-3 bg-[#18253d] border-b border-slate-700/60 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span className="font-semibold text-white">{match.competition.name}</span>
-            <span className="text-slate-500">·</span>
+        <div className="px-4 py-3 bg-slate-50 dark:bg-[#18253d] border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <span className="font-semibold text-slate-900 dark:text-white">{match.competition.name}</span>
+            <span className="text-slate-400 dark:text-slate-500">·</span>
             <span>{match.date}</span>
-            <span className="text-slate-500">·</span>
+            <span className="text-slate-400 dark:text-slate-500">·</span>
             <span className="font-mono">{match.kickoffTime}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => onToggleFavorite(match.id)}
-              className="text-xs px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 text-slate-200 hover:text-amber-400 transition-colors"
+              className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-amber-500 dark:hover:text-amber-400 transition-colors"
             >
               {isFavorite ? '★ Favorited' : '☆ Favorite'}
             </button>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors"
               aria-label="Close match details"
             >
               <X className="w-4 h-4" />
@@ -94,7 +94,7 @@ export const MatchAnalysisModal: React.FC<MatchAnalysisModalProps> = ({
         </div>
 
         {/* Hero Scoreboard */}
-        <div className="p-4 sm:p-6 bg-gradient-to-b from-[#18253d] to-[#121c2e] border-b border-slate-800/80 shrink-0">
+        <div className="p-4 sm:p-6 bg-gradient-to-b from-slate-50 to-white dark:from-[#18253d] dark:to-[#121c2e] border-b border-slate-200 dark:border-slate-800/80 shrink-0">
           <div className="flex items-center justify-between gap-3">
             {/* Home Team */}
             <div className="flex-1 flex flex-col items-center text-center">

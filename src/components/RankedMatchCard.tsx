@@ -67,10 +67,10 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
   return (
     <div
       onClick={() => onSelectMatch(match)}
-      className="group relative bg-[#152033] hover:bg-[#1a2840] border border-slate-800/80 hover:border-sky-600/50 rounded-2xl p-3 sm:p-4 transition-all cursor-pointer select-none shadow-md overflow-hidden"
+      className="group relative bg-white dark:bg-[#152033] hover:bg-slate-50 dark:hover:bg-[#1a2840] border border-slate-200 dark:border-slate-800/80 hover:border-sky-500/50 dark:hover:border-sky-600/50 rounded-2xl p-3 sm:p-4 transition-all cursor-pointer select-none shadow-sm dark:shadow-md overflow-hidden"
     >
       {/* Top Probability Edge Bar */}
-      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-800/60 text-xs">
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800/60 text-xs">
         {/* Left: Rank & Competition */}
         <div className="flex items-center gap-2 min-w-0">
           <span
@@ -83,10 +83,10 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
 
           <div className="flex items-center gap-1.5 truncate">
             <span className="text-sm">{match.competition.flag}</span>
-            <span className="font-bold text-slate-300 truncate text-[11px] sm:text-xs">
+            <span className="font-bold text-slate-800 dark:text-slate-300 truncate text-[11px] sm:text-xs">
               {match.competition.name}
             </span>
-            <span className="text-slate-500 text-[10px] hidden xs:inline font-mono">
+            <span className="text-slate-400 dark:text-slate-500 text-[10px] hidden xs:inline font-mono">
               · {match.venue}
             </span>
           </div>
@@ -106,12 +106,12 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
 
           <button
             onClick={onToggleFavorite}
-            className="p-1 rounded-lg text-slate-500 hover:text-amber-400 hover:bg-slate-800/60 transition-colors focus:outline-none"
+            className="p-1 rounded-lg text-slate-400 hover:text-amber-500 dark:text-slate-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus:outline-none"
             aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
             <Star
               className={`w-4 h-4 ${
-                isFavorite ? 'fill-amber-400 text-amber-400' : 'text-slate-500'
+                isFavorite ? 'fill-amber-400 text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'
               }`}
             />
           </button>
@@ -125,14 +125,14 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
           <div className="min-w-0">
             <div className="flex items-center justify-end gap-1.5">
               <span
-                className={`text-xs sm:text-sm font-bold truncate block group-hover:text-white ${
-                  market === 'HOME' ? 'text-sky-300 font-extrabold' : 'text-slate-100'
+                className={`text-xs sm:text-sm font-bold truncate block group-hover:text-slate-950 dark:group-hover:text-white ${
+                  market === 'HOME' ? 'text-sky-600 dark:text-sky-300 font-extrabold' : 'text-slate-800 dark:text-slate-100'
                 }`}
               >
                 {match.homeTeam.name}
               </span>
               {market === 'HOME' && (
-                <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-sky-950 text-sky-400 border border-sky-600/40 shrink-0">
+                <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border border-sky-300 dark:border-sky-600/40 shrink-0">
                   HOME
                 </span>
               )}
@@ -150,28 +150,28 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
         <div className="w-20 sm:w-24 flex flex-col items-center justify-center shrink-0 px-1 text-center">
           {isLive ? (
             <>
-              <span className="text-[10px] font-bold text-sky-400 tracking-wider">
+              <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 tracking-wider">
                 {match.livePeriod || '1H'} {match.minute ? `${match.minute}'` : ''}
               </span>
-              <div className="flex items-center gap-1.5 text-base sm:text-lg font-black font-mono tabular-nums text-white">
+              <div className="flex items-center gap-1.5 text-base sm:text-lg font-black font-mono tabular-nums text-slate-900 dark:text-white">
                 <span>{match.scores?.home ?? 0}</span>
-                <span className="text-slate-500">-</span>
+                <span className="text-slate-400 dark:text-slate-500">-</span>
                 <span>{match.scores?.away ?? 0}</span>
               </div>
             </>
           ) : isFinished ? (
             <>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 FT
               </span>
-              <div className="flex items-center gap-1.5 text-base sm:text-lg font-black font-mono tabular-nums text-slate-200">
+              <div className="flex items-center gap-1.5 text-base sm:text-lg font-black font-mono tabular-nums text-slate-800 dark:text-slate-200">
                 <span>{match.scores?.home ?? 0}</span>
-                <span className="text-slate-500">-</span>
+                <span className="text-slate-400 dark:text-slate-500">-</span>
                 <span>{match.scores?.away ?? 0}</span>
               </div>
             </>
           ) : (
-            <span className="text-sm font-extrabold font-mono tabular-nums text-slate-200 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
+            <span className="text-sm font-extrabold font-mono tabular-nums text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700/60">
               {match.kickoffTime}
             </span>
           )}
@@ -183,14 +183,14 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
           <div className="min-w-0">
             <div className="flex items-center justify-start gap-1.5">
               <span
-                className={`text-xs sm:text-sm font-bold truncate block group-hover:text-white ${
-                  market === 'AWAY' ? 'text-indigo-300 font-extrabold' : 'text-slate-100'
+                className={`text-xs sm:text-sm font-bold truncate block group-hover:text-slate-950 dark:group-hover:text-white ${
+                  market === 'AWAY' ? 'text-indigo-600 dark:text-indigo-300 font-extrabold' : 'text-slate-800 dark:text-slate-100'
                 }`}
               >
                 {match.awayTeam.name}
               </span>
               {market === 'AWAY' && (
-                <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-indigo-950 text-indigo-400 border border-indigo-600/40 shrink-0">
+                <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-600/40 shrink-0">
                   AWAY
                 </span>
               )}
@@ -205,7 +205,7 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
       </div>
 
       {/* Probability Progress Visual Meter for this market */}
-      <div className="w-full bg-slate-800/80 h-1.5 rounded-full overflow-hidden mb-2">
+      <div className="w-full bg-slate-100 dark:bg-slate-800/80 h-1.5 rounded-full overflow-hidden mb-2">
         <div
           className={`h-full rounded-full bg-gradient-to-r ${verdict.barColor} transition-all duration-500`}
           style={{ width: `${Math.min(100, Math.max(5, prob))}%` }}
@@ -213,31 +213,31 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
       </div>
 
       {/* Bottom Insights Row */}
-      <div className="pt-2 border-t border-slate-800/50 flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-slate-400">
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/50 flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-2 flex-wrap">
           {/* Win 1X2 probabilities */}
-          <span className="font-mono text-slate-300 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
-            1: <strong className="text-sky-400">{match.predictions.outcomeProbabilities.homeWin}%</strong>
-            <span className="text-slate-600 mx-1">|</span>
-            X: <strong className="text-slate-300">{match.predictions.outcomeProbabilities.draw}%</strong>
-            <span className="text-slate-600 mx-1">|</span>
-            2: <strong className="text-indigo-400">{match.predictions.outcomeProbabilities.awayWin}%</strong>
+          <span className="font-mono text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+            1: <strong className="text-sky-600 dark:text-sky-400">{match.predictions.outcomeProbabilities.homeWin}%</strong>
+            <span className="text-slate-400 dark:text-slate-600 mx-1">|</span>
+            X: <strong className="text-slate-700 dark:text-slate-300">{match.predictions.outcomeProbabilities.draw}%</strong>
+            <span className="text-slate-400 dark:text-slate-600 mx-1">|</span>
+            2: <strong className="text-indigo-600 dark:text-indigo-400">{match.predictions.outcomeProbabilities.awayWin}%</strong>
           </span>
 
           {/* xG */}
-          <span className="hidden sm:inline font-mono text-slate-400">
-            xG: <span className="text-slate-200">{match.predictions.expectedGoals.home}</span> vs{' '}
-            <span className="text-slate-200">{match.predictions.expectedGoals.away}</span>
+          <span className="hidden sm:inline font-mono text-slate-500 dark:text-slate-400">
+            xG: <span className="text-slate-800 dark:text-slate-200">{match.predictions.expectedGoals.home}</span> vs{' '}
+            <span className="text-slate-800 dark:text-slate-200">{match.predictions.expectedGoals.away}</span>
           </span>
 
           {/* Confidence Tier Tag */}
-          <span className="inline-flex items-center gap-1 font-semibold text-[10px] px-2 py-0.5 rounded-full bg-sky-950/40 border border-sky-800/40 text-sky-300">
-            <ShieldCheck className="w-3 h-3 text-sky-400" />
+          <span className="inline-flex items-center gap-1 font-semibold text-[10px] px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/40 border border-sky-300 dark:border-sky-800/40 text-sky-800 dark:text-sky-300">
+            <ShieldCheck className="w-3 h-3 text-sky-600 dark:text-sky-400" />
             {verdict.confidenceLabel}
           </span>
         </div>
 
-        <div className="flex items-center gap-1 text-sky-400 group-hover:text-sky-300 font-semibold text-[11px] ml-auto">
+        <div className="flex items-center gap-1 text-sky-600 dark:text-sky-400 group-hover:text-sky-500 dark:group-hover:text-sky-300 font-semibold text-[11px] ml-auto">
           <span>Analyze</span>
           <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
         </div>

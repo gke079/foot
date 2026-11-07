@@ -44,7 +44,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   return (
     <div
       onClick={() => onSelectMatch(match)}
-      className="group relative bg-[#172236] hover:bg-[#1c2a42] border-b border-slate-800/80 transition-all cursor-pointer select-none"
+      className="group relative bg-white dark:bg-[#172236] hover:bg-slate-50 dark:hover:bg-[#1c2a42] border-b border-slate-200 dark:border-slate-800/80 transition-all cursor-pointer select-none"
     >
       {/* Live Active Bar on Left (matching screenshot) */}
       {isLive && (
@@ -55,12 +55,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         {/* Favorite Star Button */}
         <button
           onClick={onToggleFavorite}
-          className="p-1 rounded-lg text-slate-500 hover:text-amber-400 hover:bg-slate-800/60 transition-colors focus:outline-none"
+          className="p-1 rounded-lg text-slate-400 hover:text-amber-500 dark:text-slate-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus:outline-none"
           aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
         >
           <Star
             className={`w-4 h-4 ${
-              isFavorite ? 'fill-amber-400 text-amber-400' : 'text-slate-500'
+              isFavorite ? 'fill-amber-400 text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'
             }`}
           />
         </button>
@@ -68,7 +68,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         {/* Home Team */}
         <div className="flex-1 flex items-center justify-end gap-2 text-right min-w-0">
           <div className="min-w-0">
-            <span className="text-xs sm:text-sm font-semibold text-slate-100 truncate block group-hover:text-white">
+            <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate block group-hover:text-slate-950 dark:group-hover:text-white">
               {match.homeTeam.shortName}
             </span>
             {showTeamForm && (
@@ -84,28 +84,28 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <div className="w-20 flex flex-col items-center justify-center shrink-0 px-1 text-center">
           {isLive ? (
             <>
-              <span className="text-[10px] font-bold text-sky-400 tracking-wider">
+              <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 tracking-wider">
                 {match.livePeriod || '1H'} {match.minute ? `${match.minute}'` : ''}
               </span>
-              <div className="flex items-center gap-1.5 text-base font-extrabold font-mono tabular-nums text-white">
+              <div className="flex items-center gap-1.5 text-base font-extrabold font-mono tabular-nums text-slate-900 dark:text-white">
                 <span>{match.scores?.home ?? 0}</span>
-                <span className="text-slate-500">-</span>
+                <span className="text-slate-400 dark:text-slate-500">-</span>
                 <span>{match.scores?.away ?? 0}</span>
               </div>
             </>
           ) : isFinished ? (
             <>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 FT
               </span>
-              <div className="flex items-center gap-1.5 text-base font-extrabold font-mono tabular-nums text-slate-200">
+              <div className="flex items-center gap-1.5 text-base font-extrabold font-mono tabular-nums text-slate-800 dark:text-slate-200">
                 <span>{match.scores?.home ?? 0}</span>
-                <span className="text-slate-500">-</span>
+                <span className="text-slate-400 dark:text-slate-500">-</span>
                 <span>{match.scores?.away ?? 0}</span>
               </div>
             </>
           ) : (
-            <span className="text-sm font-extrabold font-mono tabular-nums text-slate-300 bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/50">
+            <span className="text-sm font-extrabold font-mono tabular-nums text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/60 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700/50">
               {match.kickoffTime}
             </span>
           )}
@@ -115,7 +115,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <div className="flex-1 flex items-center justify-start gap-2 text-left min-w-0">
           <TeamCrest crest={match.awayTeam.crest} name={match.awayTeam.name} size="md" />
           <div className="min-w-0">
-            <span className="text-xs sm:text-sm font-semibold text-slate-100 truncate block group-hover:text-white">
+            <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate block group-hover:text-slate-950 dark:group-hover:text-white">
               {match.awayTeam.shortName}
             </span>
             {showTeamForm && (
@@ -128,36 +128,36 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       </div>
 
       {/* Algorithmic Prediction Highlights Bar (Probabilities & Consecutive Streaks) */}
-      <div className="px-3 pb-2 pt-0.5 flex flex-wrap items-center justify-between gap-1 text-[11px] border-t border-slate-800/40 text-slate-400">
+      <div className="px-3 pb-2 pt-0.5 flex flex-wrap items-center justify-between gap-1 text-[11px] border-t border-slate-100 dark:border-slate-800/40 text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-2">
           {/* Win Probability breakdown */}
-          <span className="font-mono tabular-nums text-slate-300">
-            <span className="text-sky-400 font-semibold">{match.predictions.outcomeProbabilities.homeWin}%</span>
-            <span className="text-slate-500 mx-1">·</span>
-            <span className="text-slate-400">{match.predictions.outcomeProbabilities.draw}%</span>
-            <span className="text-slate-500 mx-1">·</span>
-            <span className="text-indigo-400 font-semibold">{match.predictions.outcomeProbabilities.awayWin}%</span>
+          <span className="font-mono tabular-nums text-slate-700 dark:text-slate-300">
+            <span className="text-sky-600 dark:text-sky-400 font-semibold">{match.predictions.outcomeProbabilities.homeWin}%</span>
+            <span className="text-slate-400 dark:text-slate-500 mx-1">·</span>
+            <span className="text-slate-600 dark:text-slate-400">{match.predictions.outcomeProbabilities.draw}%</span>
+            <span className="text-slate-400 dark:text-slate-500 mx-1">·</span>
+            <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{match.predictions.outcomeProbabilities.awayWin}%</span>
           </span>
 
           {/* Over 2.5 probability */}
-          <span className="hidden sm:inline text-slate-400">
-            O2.5: <strong className="text-slate-200 font-mono">{match.predictions.goalMarkets.over25}%</strong>
+          <span className="hidden sm:inline text-slate-500 dark:text-slate-400">
+            O2.5: <strong className="text-slate-800 dark:text-slate-200 font-mono">{match.predictions.goalMarkets.over25}%</strong>
           </span>
         </div>
 
         {/* Key Market Pick / Consecutive Goals Highlight */}
         <div className="flex items-center gap-1.5">
           {consecutiveStreak && (consecutiveStreak.homeScore2PlusUnanswered >= 40 || consecutiveStreak.awayScore2PlusUnanswered >= 40) && (
-            <span className="hidden xs:inline-flex items-center gap-1 text-[10px] text-amber-300 bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-800/40 font-medium">
-              <Zap className="w-3 h-3 text-amber-400" />
+            <span className="hidden xs:inline-flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/40 font-medium">
+              <Zap className="w-3 h-3 text-amber-500 dark:text-amber-400" />
               {consecutiveStreak.homeScore2PlusUnanswered >= consecutiveStreak.awayScore2PlusUnanswered
                 ? `${match.homeTeam.shortName} 2+ run: ${consecutiveStreak.homeScore2PlusUnanswered}%`
                 : `${match.awayTeam.shortName} 2+ run: ${consecutiveStreak.awayScore2PlusUnanswered}%`}
             </span>
           )}
 
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-300 bg-sky-950/50 px-2 py-0.5 rounded border border-sky-800/50">
-            <TrendingUp className="w-3 h-3 text-sky-400" />
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 rounded border border-sky-200 dark:border-sky-800/50">
+            <TrendingUp className="w-3 h-3 text-sky-600 dark:text-sky-400" />
             {match.predictions.primaryVerdict.pick}
           </span>
         </div>
