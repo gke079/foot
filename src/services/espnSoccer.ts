@@ -1,5 +1,6 @@
 import { Match, Competition, Team, Referee, H2HSummary, FormResult } from '../types/football';
 import { calculateMatchPredictions } from '../utils/predictionEngine';
+import { formatToEatKickoffTime, formatToEatDate } from '../utils/dateUtils';
 
 interface EspnLeagueDef {
   id: string;
@@ -391,17 +392,10 @@ function parseEspnEvent(event: any, dateStr: string): Match | null {
     status = 'POSTPONED';
   }
 
-  // Kickoff time formatted nicely
+  // Kickoff time formatted nicely in East Africa Time (EAT, UTC+3)
   const eventDateStr = event.date || '';
-  let kickoffTime = '15:00';
-  if (eventDateStr.length >= 16) {
-    try {
-      const d = new Date(eventDateStr);
-      kickoffTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    } catch {
-      kickoffTime = eventDateStr.substring(11, 16);
-    }
-  }
+  const kickoffTime = eventDateStr ? formatToEatKickoffTime(eventDateStr) : '18:00';
+  const matchDate = eventDateStr ? formatToEatDate(eventDateStr) : dateStr;
 
   // Scores
   const homeScore = parseInt(homeComp.score || '0', 10) || 0;
@@ -515,7 +509,7 @@ function parseEspnEvent(event: any, dateStr: string): Match | null {
   return {
     id: `espn-${event.id}`,
     competition,
-    date: dateStr,
+    date: matchDate,
     kickoffTime,
     status,
     minute,
@@ -558,6 +552,7 @@ export async function fetchRealMatchesFromEspn(dateStr: string): Promise<Match[]
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
+      signal: AbortSignal.timeout(3500),
     });
 
     if (res.ok) {
@@ -576,43 +571,39 @@ export async function fetchRealMatchesFromEspn(dateStr: string): Promise<Match[]
     console.warn('Failed master ESPN soccer feed:', err);
   }
 
-  // 2. Query major active world league endpoints in parallel for complete fixture coverage
-  const activeLeagueCodes = [
-    'eng.fa', 'eng.1', 'eng.2', 'eng.3', 'eng.league_cup', 'eng.trophy',
-    'esp.1', 'esp.2', 'esp.copa_del_rey',
-    'ita.1', 'ita.2', 'ita.coppa_italia',
-    'ger.1', 'ger.2', 'ger.dfb_pokal',
-    'fra.1', 'fra.2', 'fra.coupe_de_france',
-    'uefa.champions', 'uefa.europa', 'uefa.europa.conf', 'uefa.nations',
-    'por.1', 'tur.1', 'ned.1', 'ned.2', 'bel.1', 'sco.1', 'nor.1', 'swe.1', 'den.1', 'gre.1',
-    'col.1', 'ecu.1', 'par.1', 'bol.1', 'arg.1', 'bra.1', 'bra.2', 'chi.1', 'per.1', 'mex.1', 'usa.1',
-    'sau.1', 'egy.1', 'caf.champions', 'afc.champions', 'aus.1', 'fifa.friendly'
-  ];
+  // 2. Query major active world league endpoints ONLY if master scoreboard returned zero matches
+  if (matchMap.size === 0) {
+    const activeLeagueCodes = [
+      'eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1',
+      'uefa.champions', 'uefa.europa', 'usa.1', 'sau.1'
+    ];
 
-  const leaguePromises = activeLeagueCodes.map(async code => {
-    try {
-      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${code}/scoreboard?dates=${espnDate}`;
-      const res = await fetch(url, {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-      });
-      if (!res.ok) return;
-      const json = await res.json();
-      const events = json.events || [];
-      for (const ev of events) {
-        const m = parseEspnEvent(ev, dateStr);
-        if (m && !matchMap.has(m.id)) {
-          matchMap.set(m.id, m);
+    const leaguePromises = activeLeagueCodes.map(async code => {
+      try {
+        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${code}/scoreboard?dates=${espnDate}`;
+        const res = await fetch(url, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+          signal: AbortSignal.timeout(2500),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const events = json.events || [];
+        for (const ev of events) {
+          const m = parseEspnEvent(ev, dateStr);
+          if (m && !matchMap.has(m.id)) {
+            matchMap.set(m.id, m);
+          }
         }
+      } catch {
+        // Ignored for individual leagues
       }
-    } catch {
-      // Ignored for individual leagues
-    }
-  });
+    });
 
-  await Promise.all(leaguePromises);
+    await Promise.all(leaguePromises);
+  }
 
   const finalMatches = Array.from(matchMap.values());
   if (finalMatches.length > 0) {

@@ -80,18 +80,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </p>
 
           <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
-            <span className="font-bold text-sky-300 block">Available Free Football APIs:</span>
+            <span className="font-bold text-sky-300 block">Available Football APIs:</span>
             <div className="flex items-start gap-1.5">
               <span className="text-emerald-400 font-bold">1. ESPN Open Feed (Active):</span>
               <span className="text-slate-400">100% Free, NO API key or login needed, real live scores, clock, and crests worldwide.</span>
             </div>
             <div className="flex items-start gap-1.5">
-              <span className="text-sky-300 font-bold">2. API-Sports Free Tier:</span>
-              <span className="text-slate-400">100 free requests/day with your custom key once email/plan is activated on dashboard.api-football.com.</span>
-            </div>
-            <div className="flex items-start gap-1.5">
-              <span className="text-amber-300 font-bold">3. Football-Data.org:</span>
-              <span className="text-slate-400">Generous free tier token covering major leagues.</span>
+              <span className="text-sky-300 font-bold">2. API-Sports (api-football):</span>
+              <span className="text-slate-400">100 free requests/day with your custom key once activated on dashboard.api-football.com.</span>
             </div>
           </div>
 
@@ -234,6 +230,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               />
             </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-[#162238] border border-slate-200 dark:border-slate-800 text-xs">
+            <div>
+              <span className="font-bold text-slate-900 dark:text-white block">Timezone Configuration</span>
+              <span className="text-slate-500 dark:text-slate-400 text-[11px]">Africa/Nairobi (East Africa Time)</span>
+            </div>
+            <span className="text-[10px] font-mono font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700/50">
+              EAT (UTC+3)
+            </span>
           </div>
 
           <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-[#162238] border border-slate-200 dark:border-slate-800 text-xs">

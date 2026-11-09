@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Match, LeagueNotificationSubscription, AppNotification, PredictionMarketFilter } from './types/football';
-import { ALL_MATCHES, POPULAR_COMPETITIONS, getMatchesForDate } from './data/mockMatches';
+import { ALL_MATCHES, POPULAR_COMPETITIONS } from './data/mockMatches';
 import { Header } from './components/Header';
 import { SubHeader, RegionFilter } from './components/SubHeader';
 import { DateCarousel } from './components/DateCarousel';
@@ -18,7 +18,7 @@ import { PredictionMarketSelector } from './components/PredictionMarketSelector'
 import { LeagueAndTimeFilterBar, TimeFilter, LeagueOption, TimeCounts } from './components/LeagueAndTimeFilterBar';
 import { RankedMatchCard } from './components/RankedMatchCard';
 import { SportyBetAZMenu } from './components/SportyBetAZMenu';
-import { PREDICTION_MARKET_OPTIONS, getMarketProbability } from './utils/predictionEngine';
+import { PREDICTION_MARKET_OPTIONS, getMarketProbability, getBestMarketForMatch } from './utils/predictionEngine';
 import { getEspnLeagueSortRank } from './services/espnSoccer';
 import { getSportyBetLeagueInfo, getSportyBetSortRank } from './utils/sportybetLeagues';
 import { getLocalTodayDateString } from './utils/dateUtils';
@@ -283,8 +283,8 @@ export default function App() {
   };
 
   // Real Matches State from Server / API-Sports
-  const [rawMatchesForDate, setRawMatchesForDate] = useState<Match[]>(() => getMatchesForDate(selectedDate));
-  const [isLoadingMatches, setIsLoadingMatches] = useState<boolean>(false);
+  const [rawMatchesForDate, setRawMatchesForDate] = useState<Match[]>([]);
+  const [isLoadingMatches, setIsLoadingMatches] = useState<boolean>(true);
   const [isRealData, setIsRealData] = useState<boolean>(false);
   const [dataSource, setDataSource] = useState<string>('Initializing');
   const [apiSportsConfigured, setApiSportsConfigured] = useState<boolean>(false);
@@ -309,7 +309,7 @@ export default function App() {
       .catch(err => {
         console.warn('Failed to fetch from /api/matches:', err);
         if (!isCancelled) {
-          setRawMatchesForDate(getMatchesForDate(selectedDate));
+          setRawMatchesForDate([]);
         }
       })
       .finally(() => {
@@ -510,6 +510,10 @@ export default function App() {
   const topTeamName = useMemo(() => {
     if (selectedPredictionMarket === 'ALL' || displayedMatches.length === 0) return undefined;
     const first = displayedMatches[0];
+    if (selectedPredictionMarket === 'HIGHEST_PROB') {
+      const best = getBestMarketForMatch(first);
+      return `${best.selection} (${first.homeTeam.shortName} vs ${first.awayTeam.shortName})`;
+    }
     if (selectedPredictionMarket === 'HOME') return first.homeTeam.name;
     if (selectedPredictionMarket === 'AWAY') return first.awayTeam.name;
     return `${first.homeTeam.shortName} vs ${first.awayTeam.shortName}`;
@@ -719,35 +723,6 @@ export default function App() {
         )}
       </div>
 
-      {/* Account Status Notice if suspended or rate-limited */}
-      {accountNotice && (
-        <div className="max-w-4xl mx-auto w-full px-3 sm:px-4 pt-2">
-          <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-600/50 flex items-start justify-between gap-3 text-xs text-amber-200">
-            <div className="flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold text-white block">API-Sports Notice: {accountNotice}</span>
-                <p className="text-[11px] text-amber-300/80 mt-0.5">
-                  The app has safely routed to our built-in global fixtures database so you can continue exploring match predictions, H2H, and consecutive goal runs.
-                </p>
-                <button
-                  onClick={() => setIsSettingsModalOpen(true)}
-                  className="mt-1.5 inline-flex items-center gap-1 text-sky-300 hover:text-sky-200 font-semibold text-[11px] underline"
-                >
-                  View activation steps & re-verify key ↗
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => setAccountNotice(null)}
-              className="text-slate-400 hover:text-white p-1"
-              aria-label="Dismiss notice"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Active Filter Pill Bar (if any filter is applied) */}
       {(selectedCountryFilter || selectedLeagueFilter || isLiveOnly || isPastDate || selectedPredictionMarket !== 'ALL') && (

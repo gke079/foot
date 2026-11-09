@@ -11,23 +11,29 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+// Helper to get Gemini client only when valid key is present (avoids startup warnings)
+function getGeminiClient(): GoogleGenAI | null {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key || key === 'MY_GEMINI_API_KEY' || key === 'YOUR_GEMINI_API_KEY' || key.trim().length < 6) {
+    return null;
+  }
+  return new GoogleGenAI({
+    apiKey: key.trim(),
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
     },
-  },
-});
+  });
+}
 
 import { fetchRealMatchesFromApiSports, isApiSportsConfigured, getApiSportsKey, getApiAccountNotice, checkApiSportsAccount } from './src/services/apiSports';
 import { fetchRealMatchesFromEspn } from './src/services/espnSoccer';
-import { getSportyBetDailyFixtures } from './src/services/sportybetFixtures';
+import { getLocalTodayDateString } from './src/utils/dateUtils';
 
 // API Routes
 app.get('/api/status', (_req: Request, res: Response) => {
@@ -46,7 +52,7 @@ app.post('/api/check-api-sports', async (_req: Request, res: Response) => {
 });
 
 app.get('/api/matches', async (req: Request, res: Response) => {
-  const todayDefault = new Date().toISOString().split('T')[0];
+  const todayDefault = getLocalTodayDateString();
   const dateQuery = (req.query.date as string) || todayDefault;
   
   let realMatches: any[] = [];
@@ -81,34 +87,12 @@ app.get('/api/matches', async (req: Request, res: Response) => {
     }
   }
 
-  // 3. SportyBet Complete Daily Program
-  // Merges all real live/scheduled games with SportyBet daily fixtures
-  // so every single SportyBet league (Premier League, Champions League, LaLiga, Serie A, etc.) is fully represented!
-  const sportyFixtures = getSportyBetDailyFixtures(dateQuery);
-  const existingTeams = new Set<string>();
-
-  for (const m of realMatches) {
-    if (m.homeTeam?.name) existingTeams.add(m.homeTeam.name.toLowerCase());
-    if (m.awayTeam?.name) existingTeams.add(m.awayTeam.name.toLowerCase());
-  }
-
-  const mergedMatches = [...realMatches];
-  for (const sf of sportyFixtures) {
-    const homeLower = sf.homeTeam.name.toLowerCase();
-    const awayLower = sf.awayTeam.name.toLowerCase();
-    if (!existingTeams.has(homeLower) && !existingTeams.has(awayLower)) {
-      mergedMatches.push(sf);
-      existingTeams.add(homeLower);
-      existingTeams.add(awayLower);
-    }
-  }
-
   res.json({
     date: dateQuery,
-    matches: mergedMatches,
+    matches: realMatches,
     isRealData: isRealFeed,
-    source: isRealFeed ? `${sourceName} + SportyBet Card` : 'SportyBet Daily Football Suite',
-    total: mergedMatches.length,
+    source: isRealFeed ? sourceName : 'Live Scoreboard Feed',
+    total: realMatches.length,
     realCount: realMatches.length,
     apiSportsConfigured: isApiSportsConfigured(),
     accountNotice: getApiAccountNotice(),
@@ -186,6 +170,11 @@ Provide deep analysis focusing on:
 3. Key individual and positional battles.
 4. Consecutive goals probability analysis: Likelihood and conditions under which one team scores 2 or more consecutive goals without the opponent scoring.
 5. Smart quantitative value picks with probabilities and deep rationale.`;
+
+    const ai = getGeminiClient();
+    if (!ai) {
+      throw new Error('Gemini API key not configured');
+    }
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.8-flash',
@@ -303,9 +292,25 @@ async function startServer() {
     });
   }
 
-  app.listen(port, '0.0.0.0', () => {
+  const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Server listening on http://0.0.0.0:${port}`);
   });
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`Port ${port} in use, retrying in 1s...`);
+      setTimeout(() => {
+        server.close();
+        server.listen(port, '0.0.0.0');
+      }, 1000);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
 }
+
+process.on('unhandledRejection', (reason) => {
+  console.warn('Unhandled Rejection at:', reason);
+});
 
 startServer();

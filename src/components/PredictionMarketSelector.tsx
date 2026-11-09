@@ -68,7 +68,10 @@ export const PredictionMarketSelector: React.FC<PredictionMarketSelectorProps> =
                 className="w-full appearance-none bg-white text-slate-900 border-slate-300 hover:border-slate-400 dark:bg-[#19263e] dark:hover:bg-[#1f2f4c] dark:text-white text-xs font-bold pl-3 pr-8 py-2 rounded-xl border dark:border-sky-600/50 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors cursor-pointer shadow-sm"
               >
                 <option value="ALL">
-                  🌟 All Matches (Default Fixtures)
+                  🌟 All Matches (Default Schedule)
+                </option>
+                <option value="HIGHEST_PROB" className="font-extrabold text-amber-600 dark:text-amber-400">
+                  ⚡ Highest Probability (Best Market per Match)
                 </option>
                 <optgroup label="── 1X2 Match Outcomes ──">
                   <option value="HOME">

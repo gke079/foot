@@ -78,27 +78,32 @@ export const SubHeader: React.FC<SubHeaderProps> = ({
             </button>
           </div>
 
-          {/* Right: Team Form Toggle (Show/Hide) */}
-          <div className="flex items-center gap-2 py-2">
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-400 hidden xs:inline">Team Form</span>
-            <button
-              onClick={onToggleTeamForm}
-              className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
-                showTeamForm ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-700'
-              }`}
-              role="switch"
-              aria-checked={showTeamForm}
-              aria-label="Toggle team form display"
-            >
-              <span
-                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                  showTeamForm ? 'translate-x-5' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 w-7">
-              {showTeamForm ? 'Show' : 'Hide'}
+          {/* Right: Timezone EAT Badge + Team Form Toggle */}
+          <div className="flex items-center gap-3 py-2">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 border border-amber-500/30">
+              🕒 EAT (UTC+3)
             </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400 hidden xs:inline">Team Form</span>
+              <button
+                onClick={onToggleTeamForm}
+                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
+                  showTeamForm ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+                role="switch"
+                aria-checked={showTeamForm}
+                aria-label="Toggle team form display"
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    showTeamForm ? 'translate-x-5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 w-7">
+                {showTeamForm ? 'Show' : 'Hide'}
+              </span>
+            </div>
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Star, TrendingUp, Zap, ChevronRight, Award, ShieldCheck, Flame } from 'lucide-react';
 import { Match, FormResult, PredictionMarketFilter } from '../types/football';
 import { TeamCrest } from './TeamCrest';
-import { getMarketProbability, getMarketDetailVerdict, PREDICTION_MARKET_OPTIONS } from '../utils/predictionEngine';
+import { getMarketProbability, getMarketDetailVerdict, PREDICTION_MARKET_OPTIONS, getBestMarketForMatch } from '../utils/predictionEngine';
 
 interface RankedMatchCardProps {
   match: Match;
@@ -23,8 +23,10 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
   onToggleFavorite,
   onSelectMatch,
 }) => {
-  const prob = getMarketProbability(match, market);
-  const verdict = getMarketDetailVerdict(market, prob);
+  const isHighestProbMode = market === 'HIGHEST_PROB';
+  const bestMarket = getBestMarketForMatch(match);
+  const prob = isHighestProbMode ? bestMarket.probability : getMarketProbability(match, market);
+  const verdict = getMarketDetailVerdict(isHighestProbMode ? 'OVER_15' : market, prob);
   const marketMeta = PREDICTION_MARKET_OPTIONS.find(m => m.id === market);
 
   const isLive = match.status === 'LIVE';
@@ -97,10 +99,10 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
           <div
             className={`px-2.5 py-1 rounded-xl flex items-center gap-1.5 border font-mono font-black text-xs ${verdict.badgeBg} ${verdict.badgeColor} ${verdict.badgeBorder}`}
           >
-            <span>{marketMeta?.icon}</span>
+            <span>{isHighestProbMode ? bestMarket.icon : marketMeta?.icon}</span>
             <span className="tracking-tight text-sm">{prob}%</span>
-            <span className="text-[10px] font-sans font-bold uppercase hidden sm:inline opacity-90">
-              {marketMeta?.shortLabel}
+            <span className="text-[10px] font-sans font-bold uppercase hidden sm:inline opacity-90 max-w-[130px] truncate">
+              {isHighestProbMode ? bestMarket.marketLabel : marketMeta?.shortLabel}
             </span>
           </div>
 
@@ -203,6 +205,24 @@ export const RankedMatchCard: React.FC<RankedMatchCardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Top Market Recommendation Pill for HIGHEST_PROB Mode */}
+      {isHighestProbMode && (
+        <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/40 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="text-sm shrink-0">{bestMarket.icon}</span>
+            <span className="font-extrabold text-sky-900 dark:text-sky-300 truncate">
+              {bestMarket.selection}
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-200/80 dark:bg-sky-900/80 text-sky-950 dark:text-sky-200 font-bold shrink-0">
+              {prob}% Edge
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate hidden xs:inline shrink-0">
+            {bestMarket.reasoning}
+          </span>
+        </div>
+      )}
 
       {/* Probability Progress Visual Meter for this market */}
       <div className="w-full bg-slate-100 dark:bg-slate-800/80 h-1.5 rounded-full overflow-hidden mb-2">

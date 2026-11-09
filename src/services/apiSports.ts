@@ -1,5 +1,6 @@
 import { Match, Competition, Team, Referee, H2HSummary, Injury } from '../types/football';
 import { calculateMatchPredictions } from '../utils/predictionEngine';
+import { formatToEatKickoffTime, formatToEatDate } from '../utils/dateUtils';
 
 interface ApiSportsFixtureItem {
   fixture: {
@@ -84,6 +85,7 @@ export async function checkApiSportsAccount(): Promise<{ active: boolean; messag
   try {
     const res = await fetch('https://v3.football.api-sports.io/status', {
       headers: { 'x-apisports-key': apiKey },
+      signal: AbortSignal.timeout(3500),
     });
     const json = await res.json();
     if (json.errors && Object.keys(json.errors).length > 0) {
@@ -139,31 +141,21 @@ export async function fetchRealMatchesFromApiSports(date: string): Promise<Match
       headers: {
         'x-apisports-key': apiKey,
       },
+      signal: AbortSignal.timeout(3500),
     });
 
     if (!response.ok) {
-      lastApiNotice = `API-Sports HTTP ${response.status}: Please verify account status at dashboard.api-football.com`;
-      lastNoticeTime = Date.now();
+      console.warn(`[API-Sports] HTTP ${response.status}`);
       return null;
     }
 
     const json = await response.json();
 
-    // Check for API-Football account errors (e.g. account suspended, rate limit)
+    // If key is invalid or rate-limited, cleanly fall back to ESPN feed
     if (json.errors && Object.keys(json.errors).length > 0) {
-      let noticeMsg = '';
-      if (typeof json.errors === 'object') {
-        noticeMsg = Object.values(json.errors).join(' ');
-      } else {
-        noticeMsg = String(json.errors);
-      }
-      lastApiNotice = noticeMsg || 'Account status notice from api-football.com';
-      lastNoticeTime = Date.now();
+      console.warn('[API-Sports] API notice:', json.errors);
       return null;
     }
-
-    // Success: clear notice
-    lastApiNotice = null;
 
     const items: ApiSportsFixtureItem[] = json.response || [];
     if (items.length === 0) {
@@ -189,8 +181,9 @@ export async function fetchRealMatchesFromApiSports(date: string): Promise<Match
         status = 'POSTPONED';
       }
 
-      // Time in HH:MM
-      const kickoffTime = f.date ? f.date.substring(11, 16) : '15:00';
+      // Time in East Africa Time (EAT, UTC+3)
+      const kickoffTime = f.date ? formatToEatKickoffTime(f.date) : '18:00';
+      const matchDate = f.date ? formatToEatDate(f.date) : date;
 
       // Referee
       const refRaw = f.referee || 'Michael Oliver';
@@ -308,7 +301,7 @@ export async function fetchRealMatchesFromApiSports(date: string): Promise<Match
       return {
         id: `real-${f.id}`,
         competition,
-        date: f.date ? f.date.substring(0, 10) : date,
+        date: matchDate,
         kickoffTime,
         status,
         minute: f.status.elapsed ?? undefined,

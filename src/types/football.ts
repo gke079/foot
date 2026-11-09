@@ -210,6 +210,7 @@ export interface AppNotification {
 
 export type PredictionMarketFilter =
   | 'ALL'
+  | 'HIGHEST_PROB'
   | 'HOME'
   | 'DRAW'
   | 'AWAY'
