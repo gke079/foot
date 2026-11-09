@@ -347,6 +347,22 @@ function parseEspnEvent(event: any, dateStr: string): Match | null {
   // Resolve competition with altGameNote awareness
   const competition = resolveCompetitionFromEvent(event, comp);
 
+  // Exclude NCAA/college matches so only professional football matches appear
+  const slug = (event.season?.slug || '').toLowerCase();
+  const note = (comp?.alternateGameNote || comp?.altGameNote || '').toLowerCase();
+  const compName = (competition.name || '').toLowerCase();
+  if (
+    competition.id === 'ncaa' ||
+    slug.includes('ncaa') ||
+    slug.includes('college') ||
+    note.includes('ncaa') ||
+    note.includes('college') ||
+    compName.includes('ncaa') ||
+    compName.includes('college')
+  ) {
+    return null;
+  }
+
   // Parse status
   let status: Match['status'] = 'SCHEDULED';
   const stateName = comp.status?.type?.name || '';
@@ -532,9 +548,10 @@ export async function fetchRealMatchesFromEspn(dateStr: string): Promise<Match[]
 
   // Convert date 'YYYY-MM-DD' to ESPN format 'YYYYMMDD'
   const espnDate = dateStr.replace(/-/g, '');
+  const matchMap = new Map<string, Match>();
 
+  // 1. Query ESPN Master Global Scoreboard with limit=500
   try {
-    // 1. Query ESPN Master Global Scoreboard with limit=500 to fetch ALL global leagues in one request
     const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates=${espnDate}&limit=500`;
     const res = await fetch(url, {
       headers: {
@@ -546,33 +563,33 @@ export async function fetchRealMatchesFromEspn(dateStr: string): Promise<Match[]
     if (res.ok) {
       const json = await res.json();
       const events = json.events || [];
-
-      if (Array.isArray(events) && events.length > 0) {
-        const parsedMatches: Match[] = [];
-
+      if (Array.isArray(events)) {
         for (const event of events) {
           const m = parseEspnEvent(event, dateStr);
           if (m) {
-            parsedMatches.push(m);
+            matchMap.set(m.id, m);
           }
-        }
-
-        if (parsedMatches.length > 0) {
-          espnCache.set(dateStr, {
-            timestamp: Date.now(),
-            data: parsedMatches,
-          });
-          return parsedMatches;
         }
       }
     }
   } catch (err) {
-    console.warn('Failed master ESPN soccer feed, trying individual fallback:', err);
+    console.warn('Failed master ESPN soccer feed:', err);
   }
 
-  // 2. Fallback to individual popular leagues if master feed had an issue
-  const fallbackCodes = ['eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1', 'uefa.champions', 'usa.1', 'mex.1', 'saudi', 'por.1'];
-  const fallbackPromises = fallbackCodes.map(async code => {
+  // 2. Query major active world league endpoints in parallel for complete fixture coverage
+  const activeLeagueCodes = [
+    'eng.fa', 'eng.1', 'eng.2', 'eng.3', 'eng.league_cup', 'eng.trophy',
+    'esp.1', 'esp.2', 'esp.copa_del_rey',
+    'ita.1', 'ita.2', 'ita.coppa_italia',
+    'ger.1', 'ger.2', 'ger.dfb_pokal',
+    'fra.1', 'fra.2', 'fra.coupe_de_france',
+    'uefa.champions', 'uefa.europa', 'uefa.europa.conf', 'uefa.nations',
+    'por.1', 'tur.1', 'ned.1', 'ned.2', 'bel.1', 'sco.1', 'nor.1', 'swe.1', 'den.1', 'gre.1',
+    'col.1', 'ecu.1', 'par.1', 'bol.1', 'arg.1', 'bra.1', 'bra.2', 'chi.1', 'per.1', 'mex.1', 'usa.1',
+    'sau.1', 'egy.1', 'caf.champions', 'afc.champions', 'aus.1', 'fifa.friendly'
+  ];
+
+  const leaguePromises = activeLeagueCodes.map(async code => {
     try {
       const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${code}/scoreboard?dates=${espnDate}`;
       const res = await fetch(url, {
@@ -581,21 +598,29 @@ export async function fetchRealMatchesFromEspn(dateStr: string): Promise<Match[]
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       });
-      if (!res.ok) return [];
+      if (!res.ok) return;
       const json = await res.json();
-      return (json.events || []).map((ev: any) => parseEspnEvent(ev, dateStr)).filter(Boolean) as Match[];
+      const events = json.events || [];
+      for (const ev of events) {
+        const m = parseEspnEvent(ev, dateStr);
+        if (m && !matchMap.has(m.id)) {
+          matchMap.set(m.id, m);
+        }
+      }
     } catch {
-      return [];
+      // Ignored for individual leagues
     }
   });
 
-  const fallbackResults = (await Promise.all(fallbackPromises)).flat();
-  if (fallbackResults.length > 0) {
+  await Promise.all(leaguePromises);
+
+  const finalMatches = Array.from(matchMap.values());
+  if (finalMatches.length > 0) {
     espnCache.set(dateStr, {
       timestamp: Date.now(),
-      data: fallbackResults,
+      data: finalMatches,
     });
   }
 
-  return fallbackResults;
+  return finalMatches;
 }

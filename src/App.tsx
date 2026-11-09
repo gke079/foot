@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { SubHeader, RegionFilter } from './components/SubHeader';
 import { DateCarousel } from './components/DateCarousel';
 import { LeagueAccordion } from './components/LeagueAccordion';
+import { MatchCard } from './components/MatchCard';
 import { MatchAnalysisModal } from './components/MatchAnalysisModal';
 import { BottomNavigation, NavTab } from './components/BottomNavigation';
 import { EaglePredictorHub } from './components/EaglePredictorHub';
@@ -14,9 +15,13 @@ import { SearchModal } from './components/SearchModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LeaguesMenuModal } from './components/LeaguesMenuModal';
 import { PredictionMarketSelector } from './components/PredictionMarketSelector';
+import { LeagueAndTimeFilterBar, TimeFilter, LeagueOption, TimeCounts } from './components/LeagueAndTimeFilterBar';
 import { RankedMatchCard } from './components/RankedMatchCard';
+import { SportyBetAZMenu } from './components/SportyBetAZMenu';
 import { PREDICTION_MARKET_OPTIONS, getMarketProbability } from './utils/predictionEngine';
 import { getEspnLeagueSortRank } from './services/espnSoccer';
+import { getSportyBetLeagueInfo, getSportyBetSortRank } from './utils/sportybetLeagues';
+import { getLocalTodayDateString } from './utils/dateUtils';
 import {
   Zap,
   Sparkles,
@@ -37,24 +42,31 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function App() {
-  // Current active date (default to today: 2026-11-07)
-  const [selectedDate, setSelectedDate] = useState<string>('2026-11-07');
+  // Current active date (dynamically defaults to today's real-world date)
+  const [selectedDate, setSelectedDate] = useState<string>(() => getLocalTodayDateString());
   
   // Header controls
   const [isLiveOnly, setIsLiveOnly] = useState<boolean>(false);
   const [activeSubTab, setActiveSubTab] = useState<'ALL' | 'MY_SCORES'>('ALL');
   const [showTeamForm, setShowTeamForm] = useState<boolean>(true);
   const [selectedLeagueFilter, setSelectedLeagueFilter] = useState<string | null>(null);
+  const [selectedCountryFilter, setSelectedCountryFilter] = useState<string | null>(null);
   const [activeRegion, setActiveRegion] = useState<RegionFilter>('ALL');
+
+  // Filter Selection Box states (League & Time)
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState<TimeFilter>('ALL');
+  const [timeSortOrder, setTimeSortOrder] = useState<'ASC' | 'DESC'>('ASC');
+  // Match feed layout mode: Defaults to FLAT_LIST (unified list without forced league accordions)
+  const [matchViewMode, setMatchViewMode] = useState<'FLAT_LIST' | 'LEAGUE_GROUPS'>('FLAT_LIST');
 
   // Prediction Market Ranking Filter (Selection Box)
   const [selectedPredictionMarket, setSelectedPredictionMarket] = useState<PredictionMarketFilter>('ALL');
   const [onlyHighProbability, setOnlyHighProbability] = useState<boolean>(false);
   const [minProbabilityThreshold, setMinProbabilityThreshold] = useState<number>(0);
-  const [rankingLayoutMode, setRankingLayoutMode] = useState<'RANKED_LIST' | 'LEAGUE_GROUPS'>('LEAGUE_GROUPS');
 
   // Bottom Navigation state
   const [bottomNavTab, setBottomNavTab] = useState<NavTab>('SCORES');
@@ -68,20 +80,29 @@ export default function App() {
     return 'dark';
   });
 
-  // Keep <html> dark class synced with theme state and persist to localStorage
+  // Keep <html> and <body> dark class and colorScheme synced with theme state
   useEffect(() => {
     try {
       localStorage.setItem('apex_theme', theme);
     } catch {}
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
     } else {
       document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
     }
   }, [theme]);
 
-  const toggleTheme = (targetTheme?: 'dark' | 'light') => {
-    setTheme(prev => targetTheme ?? (prev === 'dark' ? 'light' : 'dark'));
+  const toggleTheme = (targetTheme?: unknown) => {
+    setTheme(prev => {
+      if (targetTheme === 'dark' || targetTheme === 'light') {
+        return targetTheme;
+      }
+      return prev === 'dark' ? 'light' : 'dark';
+    });
   };
 
   // Favorites
@@ -216,8 +237,8 @@ export default function App() {
       setIsEaglePredictorOpen(true);
     } else if (tab === 'FAVORITES') {
       setActiveSubTab('MY_SCORES');
-    } else if (tab === 'FOLLOWING') {
-      setIsNotificationDrawerOpen(true);
+    } else if (tab === 'AZ_MENU') {
+      // Switches to SportyBet AZ Menu
     } else if (tab === 'DISCOVER') {
       setIsEaglePredictorOpen(true);
     } else if (tab === 'SCORES') {
@@ -300,22 +321,56 @@ export default function App() {
     };
   }, [selectedDate]);
 
-  // Apply filters: Live only, My Scores, League filter, Region, AND Prediction Market!
+  // Apply filters: Live only, My Scores, League filter, Time filter, Region, AND Prediction Market!
   const displayedMatches = useMemo(() => {
     let result = rawMatchesForDate;
 
+    // Filter by live-only
     if (isLiveOnly) {
-      result = result.filter(m => m.status === 'LIVE');
+      result = result.filter(m => m.status === 'LIVE' || m.status === 'HT');
     }
 
+    // Filter by favorites / my scores
     if (activeSubTab === 'MY_SCORES') {
       result = result.filter(m => favoriteMatchIds.has(m.id));
     }
 
+    // Filter by country selection from SportyBet AZ Menu
+    if (selectedCountryFilter) {
+      if (selectedCountryFilter === 'Top Leagues') {
+        const topCountries = ['England', 'Spain', 'Germany', 'Italy', 'France', 'International Clubs'];
+        result = result.filter(m => topCountries.includes(m.competition.country) || m.competition.category === 'Popular');
+      } else {
+        result = result.filter(m => m.competition.country === selectedCountryFilter);
+      }
+    }
+
+    // Filter by league selection box
     if (selectedLeagueFilter) {
       result = result.filter(m => m.competition.id === selectedLeagueFilter);
     }
 
+    // Filter by time selection box
+    if (selectedTimeFilter !== 'ALL') {
+      if (selectedTimeFilter === 'LIVE') {
+        result = result.filter(m => m.status === 'LIVE' || m.status === 'HT');
+      } else if (selectedTimeFilter === 'MORNING') {
+        result = result.filter(m => (m.kickoffTime || '00:00') < '13:00');
+      } else if (selectedTimeFilter === 'AFTERNOON') {
+        result = result.filter(m => {
+          const t = m.kickoffTime || '00:00';
+          return t >= '13:00' && t < '17:00';
+        });
+      } else if (selectedTimeFilter === 'EVENING') {
+        result = result.filter(m => (m.kickoffTime || '00:00') >= '17:00');
+      } else if (selectedTimeFilter === 'SCHEDULED') {
+        result = result.filter(m => m.status === 'SCHEDULED');
+      } else if (selectedTimeFilter === 'FINISHED') {
+        result = result.filter(m => m.status === 'FINISHED');
+      }
+    }
+
+    // Regional filter
     if (activeRegion !== 'ALL') {
       if (activeRegion === 'Popular') {
         result = result.filter(m => m.competition.category === 'Popular');
@@ -348,6 +403,17 @@ export default function App() {
         const probB = getMarketProbability(b, selectedPredictionMarket);
         return probB - probA;
       });
+    } else {
+      // Standard Sort: Live matches first, then Kickoff Time according to timeSortOrder
+      result = [...result].sort((a, b) => {
+        const statusPriority = (s: Match['status']) => (s === 'LIVE' || s === 'HT' ? 0 : s === 'SCHEDULED' ? 1 : 2);
+        const prioA = statusPriority(a.status);
+        const prioB = statusPriority(b.status);
+        if (prioA !== prioB) return prioA - prioB;
+
+        const timeComp = (a.kickoffTime || '').localeCompare(b.kickoffTime || '');
+        return timeSortOrder === 'ASC' ? timeComp : -timeComp;
+      });
     }
 
     return result;
@@ -357,11 +423,84 @@ export default function App() {
     activeSubTab,
     favoriteMatchIds,
     selectedLeagueFilter,
+    selectedTimeFilter,
+    timeSortOrder,
     activeRegion,
     selectedPredictionMarket,
     onlyHighProbability,
     minProbabilityThreshold,
   ]);
+
+  // Available leagues options formatted SportyBet style
+  const availableLeaguesOptions: LeagueOption[] = useMemo(() => {
+    const map = new Map<string, LeagueOption>();
+    for (const m of rawMatchesForDate) {
+      const compId = m.competition.id;
+      if (!map.has(compId)) {
+        const sporty = getSportyBetLeagueInfo(m.competition);
+        map.set(compId, {
+          id: compId,
+          name: sporty.leagueName,
+          country: sporty.country,
+          flag: sporty.flag,
+          count: 0,
+        });
+      }
+      map.get(compId)!.count += 1;
+    }
+    const list = Array.from(map.values());
+    list.sort((a, b) => {
+      const rankA = getSportyBetSortRank(a.id, a.name);
+      const rankB = getSportyBetSortRank(b.id, b.name);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.name.localeCompare(b.name);
+    });
+    return list;
+  }, [rawMatchesForDate]);
+
+  // Kickoff time breakdown counts
+  const timeCounts: TimeCounts = useMemo(() => {
+    const base = selectedLeagueFilter
+      ? rawMatchesForDate.filter(m => m.competition.id === selectedLeagueFilter)
+      : rawMatchesForDate;
+
+    let live = 0;
+    let morning = 0;
+    let afternoon = 0;
+    let evening = 0;
+    let scheduled = 0;
+    let finished = 0;
+
+    for (const m of base) {
+      if (m.status === 'LIVE' || m.status === 'HT') live++;
+      else if (m.status === 'FINISHED') finished++;
+      else scheduled++;
+
+      const t = m.kickoffTime || '00:00';
+      if (t < '13:00') morning++;
+      else if (t < '17:00') afternoon++;
+      else evening++;
+    }
+
+    return {
+      all: base.length,
+      live,
+      morning,
+      afternoon,
+      evening,
+      scheduled,
+      finished,
+    };
+  }, [rawMatchesForDate, selectedLeagueFilter]);
+
+  const handleResetAllFilters = () => {
+    setSelectedCountryFilter(null);
+    setSelectedLeagueFilter(null);
+    setSelectedTimeFilter('ALL');
+    setIsLiveOnly(false);
+    setSelectedPredictionMarket('ALL');
+    setActiveRegion('ALL');
+  };
 
   const topMarketProb = useMemo(() => {
     if (selectedPredictionMarket === 'ALL' || displayedMatches.length === 0) return undefined;
@@ -455,10 +594,10 @@ export default function App() {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
-  const isPastDate = selectedDate < '2026-11-07';
+  const isPastDate = selectedDate < getLocalTodayDateString();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0d1422] text-slate-900 dark:text-slate-100 flex flex-col font-sans pb-24 selection:bg-sky-500 selection:text-white transition-colors duration-150">
+    <div className={`min-h-screen ${theme === 'dark' ? 'dark bg-[#0d1422] text-slate-100' : 'bg-slate-50 text-slate-900'} flex flex-col font-sans pb-24 selection:bg-rose-500 selection:text-white transition-colors duration-150`}>
       {/* Top App Bar matching screenshot */}
       <Header
         isLiveOnly={isLiveOnly}
@@ -472,11 +611,34 @@ export default function App() {
         onOpenLeaguesModal={() => setIsLeaguesModalOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onOpenAZMenu={() => setBottomNavTab(prev => (prev === 'AZ_MENU' ? 'SCORES' : 'AZ_MENU'))}
+        isAZMenuOpen={bottomNavTab === 'AZ_MENU'}
       />
 
-      {/* SubHeader: All Scores vs My Scores + Team Form Switch + Competitions Pill */}
-      <SubHeader
-        activeTab={activeSubTab}
+      {bottomNavTab === 'AZ_MENU' ? (
+        <SportyBetAZMenu
+          matches={rawMatchesForDate}
+          onSelectCountry={country => {
+            setSelectedCountryFilter(country);
+            setSelectedLeagueFilter(null);
+            setBottomNavTab('SCORES');
+          }}
+          onSelectLeague={leagueId => {
+            setSelectedLeagueFilter(leagueId);
+            setBottomNavTab('SCORES');
+          }}
+          onViewAllMatches={() => {
+            setSelectedCountryFilter(null);
+            setSelectedLeagueFilter(null);
+            setBottomNavTab('SCORES');
+          }}
+          liveMatchesCount={rawMatchesForDate.filter(m => m.status === 'LIVE' || m.status === 'HT').length}
+        />
+      ) : (
+        <>
+          {/* SubHeader: All Scores vs My Scores + Team Form Switch + Competitions Pill */}
+          <SubHeader
+            activeTab={activeSubTab}
         onChangeTab={tab => setActiveSubTab(tab)}
         showTeamForm={showTeamForm}
         onToggleTeamForm={() => setShowTeamForm(prev => !prev)}
@@ -492,6 +654,23 @@ export default function App() {
         selectedDate={selectedDate}
         onSelectDate={date => setSelectedDate(date)}
         onOpenCalendarModal={() => setIsCalendarModalOpen(true)}
+      />
+
+      {/* Filter Selection Boxes: League & Kickoff Time */}
+      <LeagueAndTimeFilterBar
+        selectedLeague={selectedLeagueFilter}
+        onSelectLeague={leagueId => setSelectedLeagueFilter(leagueId)}
+        availableLeagues={availableLeaguesOptions}
+        selectedTimeFilter={selectedTimeFilter}
+        onSelectTimeFilter={timeFilter => setSelectedTimeFilter(timeFilter)}
+        timeSortOrder={timeSortOrder}
+        onToggleTimeSortOrder={() => setTimeSortOrder(prev => (prev === 'ASC' ? 'DESC' : 'ASC'))}
+        timeCounts={timeCounts}
+        totalFilteredCount={displayedMatches.length}
+        totalUnfilteredCount={rawMatchesForDate.length}
+        onResetFilters={handleResetAllFilters}
+        viewMode={matchViewMode}
+        onChangeViewMode={setMatchViewMode}
       />
 
       {/* Prediction Market Selection Box & Quick Pill Switcher */}
@@ -571,8 +750,20 @@ export default function App() {
       )}
 
       {/* Active Filter Pill Bar (if any filter is applied) */}
-      {(selectedLeagueFilter || isLiveOnly || isPastDate || selectedPredictionMarket !== 'ALL') && (
+      {(selectedCountryFilter || selectedLeagueFilter || isLiveOnly || isPastDate || selectedPredictionMarket !== 'ALL') && (
         <div className="max-w-4xl mx-auto w-full px-4 pt-2.5 flex flex-wrap items-center gap-2">
+          {selectedCountryFilter && (
+            <div className="text-[11px] font-semibold text-rose-200 bg-rose-950/80 border border-rose-700/60 px-3 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
+              <span>🌍 SportyBet: <strong>{selectedCountryFilter}</strong> ({displayedMatches.length} games)</span>
+              <button
+                onClick={() => setSelectedCountryFilter(null)}
+                className="text-rose-300 hover:text-white ml-1 font-bold bg-rose-900/60 px-1 rounded cursor-pointer"
+                title="Clear country filter"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {isPastDate && (
             <div className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
               <span>📅 Showing Previous Day Results ({selectedDate})</span>
@@ -648,25 +839,25 @@ export default function App() {
               </div>
             </div>
 
-            {/* Layout switch button: Ranked Flat List vs Group by League */}
+            {/* Layout switch button: Flat List vs Group by League */}
             <div className="flex items-center gap-2 self-start sm:self-auto">
               <div className="flex items-center bg-slate-100 dark:bg-[#0d1524] p-1 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs">
                 <button
-                  onClick={() => setRankingLayoutMode('RANKED_LIST')}
-                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors ${
-                    rankingLayoutMode === 'RANKED_LIST'
+                  onClick={() => setMatchViewMode('FLAT_LIST')}
+                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                    matchViewMode === 'FLAT_LIST'
                       ? 'bg-sky-600 text-white shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
-                  title="Flat ranked list from #1 down"
+                  title="Unified flat list"
                 >
                   <LayoutList className="w-3.5 h-3.5" />
                   <span>Ranked List</span>
                 </button>
                 <button
-                  onClick={() => setRankingLayoutMode('LEAGUE_GROUPS')}
-                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors ${
-                    rankingLayoutMode === 'LEAGUE_GROUPS'
+                  onClick={() => setMatchViewMode('LEAGUE_GROUPS')}
+                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                    matchViewMode === 'LEAGUE_GROUPS'
                       ? 'bg-sky-600 text-white shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
@@ -693,68 +884,79 @@ export default function App() {
             <Filter className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
             <h3 className="text-base font-bold text-slate-900 dark:text-white">No matches found</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-              {selectedPredictionMarket !== 'ALL'
-                ? `No games on this date reached the active threshold for ${PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.label}. Try lowering the minimum probability or switching to All Matches.`
+              {selectedLeagueFilter && selectedTimeFilter !== 'ALL'
+                ? `No fixtures found matching the selected league and time criteria.`
+                : selectedLeagueFilter
+                ? `No games for this league on ${selectedDate}. Try selecting another league or resetting the filter.`
+                : selectedTimeFilter !== 'ALL'
+                ? `No matches found for the selected time window. Try selecting "All Kickoff Times".`
+                : selectedPredictionMarket !== 'ALL'
+                ? `No games on this date reached the active threshold for ${PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.label}.`
                 : isLiveOnly
                 ? 'There are no live games in progress right now. Toggle the "Live" filter off to see scheduled games.'
                 : activeSubTab === 'MY_SCORES'
                 ? 'You have not favorited any matches yet. Click the star icon on any match to track it here.'
-                : 'No fixtures found for the selected date. Select a different date from the calendar.'}
+                : 'No fixtures found for the selected date.'}
             </p>
-            {selectedPredictionMarket !== 'ALL' && (
-              <div className="mt-4 flex items-center justify-center gap-2">
-                <button
-                  onClick={() => {
-                    setMinProbabilityThreshold(0);
-                    setOnlyHighProbability(false);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold hover:bg-sky-500 transition-colors"
-                >
-                  Show All {PREDICTION_MARKET_OPTIONS.find(m => m.id === selectedPredictionMarket)?.shortLabel} Matches
-                </button>
-                <button
-                  onClick={() => setSelectedPredictionMarket('ALL')}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-colors"
-                >
-                  Reset Filter
-                </button>
-              </div>
-            )}
-            {isLiveOnly && selectedPredictionMarket === 'ALL' && (
+            <div className="mt-4 flex items-center justify-center gap-2">
               <button
-                onClick={() => setIsLiveOnly(false)}
-                className="mt-4 px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold hover:bg-sky-500 transition-colors"
+                onClick={handleResetAllFilters}
+                className="px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold hover:bg-sky-500 transition-colors cursor-pointer"
               >
-                Show All Matches
+                Reset All Filters
               </button>
-            )}
-            {activeSubTab === 'MY_SCORES' && selectedPredictionMarket === 'ALL' && (
-              <button
-                onClick={() => setActiveSubTab('ALL')}
-                className="mt-4 px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold hover:bg-sky-500 transition-colors"
-              >
-                Back to All Scores
-              </button>
-            )}
+            </div>
           </div>
-        ) : selectedPredictionMarket !== 'ALL' && rankingLayoutMode === 'RANKED_LIST' ? (
-          /* Flat Ranked Feed: Arranged starting with highest probability to lowest probability */
-          <div className="space-y-3">
-            {displayedMatches.map((match, index) => (
-              <RankedMatchCard
-                key={match.id}
-                match={match}
-                rank={index + 1}
-                market={selectedPredictionMarket}
-                showTeamForm={showTeamForm}
-                isFavorite={favoriteMatchIds.has(match.id)}
-                onToggleFavorite={e => {
-                  e.stopPropagation();
-                  toggleFavorite(match.id);
-                }}
-                onSelectMatch={matchItem => setSelectedMatchForDetail(matchItem)}
-              />
-            ))}
+        ) : matchViewMode === 'FLAT_LIST' ? (
+          /* Unified Fixture List (Default, instead of arranging into league accordions) */
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs px-1 pb-1 text-slate-500 dark:text-slate-400">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {selectedLeagueFilter
+                  ? `${availableLeaguesOptions.find(l => l.id === selectedLeagueFilter)?.name || 'Filtered'} Matches`
+                  : 'All Matches (Unified Feed)'}
+              </span>
+              <span className="font-mono text-[11px]">
+                {displayedMatches.length} {displayedMatches.length === 1 ? 'game' : 'games'}
+                {selectedTimeFilter !== 'ALL' && ` · ${selectedTimeFilter}`}
+              </span>
+            </div>
+
+            {displayedMatches.map((match, index) => {
+              const isFav = favoriteMatchIds.has(match.id);
+              if (selectedPredictionMarket !== 'ALL') {
+                return (
+                  <RankedMatchCard
+                    key={match.id}
+                    match={match}
+                    rank={index + 1}
+                    market={selectedPredictionMarket}
+                    showTeamForm={showTeamForm}
+                    isFavorite={isFav}
+                    onToggleFavorite={e => {
+                      e.stopPropagation();
+                      toggleFavorite(match.id);
+                    }}
+                    onSelectMatch={matchItem => setSelectedMatchForDetail(matchItem)}
+                  />
+                );
+              }
+
+              return (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  showTeamForm={showTeamForm}
+                  isFavorite={isFav}
+                  onToggleFavorite={e => {
+                    e.stopPropagation();
+                    toggleFavorite(match.id);
+                  }}
+                  onSelectMatch={matchItem => setSelectedMatchForDetail(matchItem)}
+                  showLeagueBadge={true}
+                />
+              );
+            })}
           </div>
         ) : (
           /* Grouped by League Feed (ESPN Hierarchy) */
@@ -882,6 +1084,8 @@ export default function App() {
           </div>
         )}
       </main>
+        </>
+      )}
 
       {/* Floating Action Button (matching the blue 9-dot FAB in screenshot) */}
       <div className="fixed bottom-20 right-4 z-30">

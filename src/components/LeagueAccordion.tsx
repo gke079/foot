@@ -4,6 +4,8 @@ import { Competition, Match, PredictionMarketFilter } from '../types/football';
 import { MatchCard } from './MatchCard';
 import { RankedMatchCard } from './RankedMatchCard';
 
+import { getSportyBetLeagueInfo } from '../utils/sportybetLeagues';
+
 interface LeagueAccordionProps {
   competition: Competition;
   matches: Match[];
@@ -31,26 +33,30 @@ export const LeagueAccordion: React.FC<LeagueAccordionProps> = ({
   onToggleLeagueNotification,
   activeMarket = 'ALL',
 }) => {
+  const sportyInfo = getSportyBetLeagueInfo(competition);
+
   return (
     <div className="mb-3 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#162135] shadow-sm dark:shadow-lg transition-colors duration-150">
-      {/* League Header matching screenshot */}
+      {/* League Header SportyBet Style */}
       <div className="px-4 py-3 bg-slate-100 dark:bg-[#1a263d] flex items-center justify-between border-b border-slate-200 dark:border-slate-800/70 select-none transition-colors duration-150">
         <div
           onClick={onToggleExpand}
           className="flex items-center gap-2.5 flex-1 cursor-pointer"
         >
-          {/* League Crest Shield outline icon matching screenshot */}
+          {/* League Flag Icon */}
           <div className="w-5 h-6 rounded-sm border-2 border-rose-500/80 dark:border-rose-400/80 flex items-center justify-center text-[10px] text-rose-600 dark:text-rose-300">
-            {competition.flag || '⚽'}
+            {sportyInfo.flag}
           </div>
 
           <div className="flex items-baseline gap-1.5 min-w-0">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-              {competition.name}
+              {sportyInfo.displayName}
             </h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-              ({competition.country})
-            </span>
+            {sportyInfo.isTopLeague && (
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40">
+                TOP
+              </span>
+            )}
           </div>
         </div>
 

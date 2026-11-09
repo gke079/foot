@@ -1,7 +1,7 @@
 import React from 'react';
 import { ListFilter, Heart, Star, Compass, Zap } from 'lucide-react';
 
-export type NavTab = 'SCORES' | 'FOLLOWING' | 'PREDICTOR_HUB' | 'FAVORITES' | 'DISCOVER';
+export type NavTab = 'SCORES' | 'AZ_MENU' | 'PREDICTOR_HUB' | 'FAVORITES' | 'DISCOVER';
 
 interface BottomNavigationProps {
   currentTab: NavTab;
@@ -15,34 +15,42 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   favoritesCount,
 }) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#121927] border-t border-slate-200 dark:border-slate-800/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md transition-colors duration-150">
-      <div className="max-w-md mx-auto relative flex items-center justify-between px-3 h-16">
-        {/* Tab 1: Scores */}
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0e1420] border-t border-[#1e2a3f] shadow-[0_-4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md transition-colors duration-150">
+      <div className="max-w-md mx-auto relative flex items-center justify-between px-2 h-15">
+        {/* Tab 1: Home */}
         <button
           onClick={() => onSelectTab('SCORES')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors ${
-            currentTab === 'SCORES' ? 'text-sky-600 dark:text-sky-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+          className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors cursor-pointer relative ${
+            currentTab === 'SCORES' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
-          aria-label="Scores view"
+          aria-label="Home matches view"
         >
-          <div className="flex flex-col gap-0.5 items-center justify-center w-5 h-5">
+          <div className="w-5 h-5 flex items-center justify-center font-black text-sm text-[#e41b23]">
+            S
+          </div>
+          <span className="text-[10px] font-semibold mt-0.5 tracking-tight">Home</span>
+          {currentTab === 'SCORES' && (
+            <span className="absolute bottom-0 w-6 h-0.5 bg-[#e41b23] rounded-full" />
+          )}
+        </button>
+
+        {/* Tab 2: AZ Menu (from screenshot) */}
+        <button
+          onClick={() => onSelectTab('AZ_MENU')}
+          className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors cursor-pointer relative ${
+            currentTab === 'AZ_MENU' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+          }`}
+          aria-label="SportyBet AZ Menu"
+        >
+          <div className="flex flex-col gap-1 items-center justify-center w-5 h-5">
             <span className="w-4 h-0.5 bg-current rounded-full" />
             <span className="w-4 h-0.5 bg-current rounded-full" />
             <span className="w-4 h-0.5 bg-current rounded-full" />
           </div>
-          <span className="text-[10px] font-semibold mt-1 tracking-tight">Scores</span>
-        </button>
-
-        {/* Tab 2: Following */}
-        <button
-          onClick={() => onSelectTab('FOLLOWING')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors ${
-            currentTab === 'FOLLOWING' ? 'text-sky-600 dark:text-sky-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
-          aria-label="Following leagues and teams"
-        >
-          <Heart className="w-5 h-5" />
-          <span className="text-[10px] font-semibold mt-1 tracking-tight">Following</span>
+          <span className="text-[10px] font-semibold mt-0.5 tracking-tight">AZ Menu</span>
+          {currentTab === 'AZ_MENU' && (
+            <span className="absolute bottom-0 w-6 h-0.5 bg-[#e41b23] rounded-full" />
+          )}
         </button>
 
         {/* Center: Prominent Eagle / Hawk Predictor Badge */}

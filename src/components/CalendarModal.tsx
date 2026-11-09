@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Check } from 'lucide-react';
+import { getLocalTodayDateString, getOffsetDateString } from '../utils/dateUtils';
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -14,13 +15,17 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
   selectedDate,
   onSelectDate,
 }) => {
-  if (!isOpen) return null;
-
   // Selected date parsed
   const [currentViewMonth, setCurrentViewMonth] = useState(() => {
     const parts = selectedDate.split('-');
     return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
   });
+
+  if (!isOpen) return null;
+
+  const todayIso = getLocalTodayDateString();
+  const yesterdayIso = getOffsetDateString(-1);
+  const tomorrowIso = getOffsetDateString(1);
 
   const year = currentViewMonth.getFullYear();
   const month = currentViewMonth.getMonth();
@@ -45,8 +50,6 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
     return `${year}-${mm}-${dd}`;
   };
 
-  const todayIso = '2026-11-07';
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-sm bg-white dark:bg-[#121c2e] border border-slate-200 dark:border-slate-700/80 rounded-3xl p-5 shadow-2xl transition-colors duration-150">
@@ -57,7 +60,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -67,24 +70,24 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
         <div className="grid grid-cols-3 gap-1.5 py-3">
           <button
             onClick={() => {
-              onSelectDate('2026-11-06');
+              onSelectDate(yesterdayIso);
               onClose();
             }}
-            className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
-              selectedDate === '2026-11-06'
+            className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors cursor-pointer ${
+              selectedDate === yesterdayIso
                 ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            Yesterday (Results)
+            Yesterday
           </button>
           <button
             onClick={() => {
-              onSelectDate('2026-11-07');
+              onSelectDate(todayIso);
               onClose();
             }}
-            className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
-              selectedDate === '2026-11-07'
+            className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors cursor-pointer ${
+              selectedDate === todayIso
                 ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
@@ -93,11 +96,11 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           </button>
           <button
             onClick={() => {
-              onSelectDate('2026-11-08');
+              onSelectDate(tomorrowIso);
               onClose();
             }}
-            className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
-              selectedDate === '2026-11-08'
+            className={`py-1.5 text-xs font-semibold rounded-xl border transition-colors cursor-pointer ${
+              selectedDate === tomorrowIso
                 ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}

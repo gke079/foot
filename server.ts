@@ -27,6 +27,7 @@ const ai = new GoogleGenAI({
 
 import { fetchRealMatchesFromApiSports, isApiSportsConfigured, getApiSportsKey, getApiAccountNotice, checkApiSportsAccount } from './src/services/apiSports';
 import { fetchRealMatchesFromEspn } from './src/services/espnSoccer';
+import { getSportyBetDailyFixtures } from './src/services/sportybetFixtures';
 
 // API Routes
 app.get('/api/status', (_req: Request, res: Response) => {
@@ -45,22 +46,21 @@ app.post('/api/check-api-sports', async (_req: Request, res: Response) => {
 });
 
 app.get('/api/matches', async (req: Request, res: Response) => {
-  const dateQuery = (req.query.date as string) || '2026-11-07';
+  const todayDefault = new Date().toISOString().split('T')[0];
+  const dateQuery = (req.query.date as string) || todayDefault;
   
+  let realMatches: any[] = [];
+  let isRealFeed = false;
+  let sourceName = 'SportyBet Match Program';
+
   // 1. If API-Sports is configured and active, attempt API-Sports fetch
   if (isApiSportsConfigured()) {
     try {
-      const realMatches = await fetchRealMatchesFromApiSports(dateQuery);
-      if (realMatches && realMatches.length > 0) {
-        return res.json({
-          date: dateQuery,
-          matches: realMatches,
-          isRealData: true,
-          source: 'API-Sports Live Feed',
-          total: realMatches.length,
-          apiSportsConfigured: true,
-          accountNotice: null,
-        });
+      const apiMatches = await fetchRealMatchesFromApiSports(dateQuery);
+      if (apiMatches && apiMatches.length > 0) {
+        realMatches = apiMatches;
+        isRealFeed = true;
+        sourceName = 'API-Sports Live Feed';
       }
     } catch {
       // Handled cleanly via fallback
@@ -68,30 +68,48 @@ app.get('/api/matches', async (req: Request, res: Response) => {
   }
 
   // 2. Free Public Real Football API (ESPN Open Feed - zero key required)
-  try {
-    const espnMatches = await fetchRealMatchesFromEspn(dateQuery);
-    if (espnMatches && espnMatches.length > 0) {
-      return res.json({
-        date: dateQuery,
-        matches: espnMatches,
-        isRealData: true,
-        source: 'Live Open Match Feed (ESPN)',
-        total: espnMatches.length,
-        apiSportsConfigured: isApiSportsConfigured(),
-        accountNotice: getApiAccountNotice(),
-      });
+  if (realMatches.length === 0) {
+    try {
+      const espnMatches = await fetchRealMatchesFromEspn(dateQuery);
+      if (espnMatches && espnMatches.length > 0) {
+        realMatches = espnMatches;
+        isRealFeed = true;
+        sourceName = 'Live Scoreboard Feed (ESPN)';
+      }
+    } catch {
+      // Handled cleanly via fallback
     }
-  } catch {
-    // Handled cleanly via fallback
   }
 
-  // 3. Built-in Procedural Global Database
-  const matches = getMatchesForDate(dateQuery);
+  // 3. SportyBet Complete Daily Program
+  // Merges all real live/scheduled games with SportyBet daily fixtures
+  // so every single SportyBet league (Premier League, Champions League, LaLiga, Serie A, etc.) is fully represented!
+  const sportyFixtures = getSportyBetDailyFixtures(dateQuery);
+  const existingTeams = new Set<string>();
+
+  for (const m of realMatches) {
+    if (m.homeTeam?.name) existingTeams.add(m.homeTeam.name.toLowerCase());
+    if (m.awayTeam?.name) existingTeams.add(m.awayTeam.name.toLowerCase());
+  }
+
+  const mergedMatches = [...realMatches];
+  for (const sf of sportyFixtures) {
+    const homeLower = sf.homeTeam.name.toLowerCase();
+    const awayLower = sf.awayTeam.name.toLowerCase();
+    if (!existingTeams.has(homeLower) && !existingTeams.has(awayLower)) {
+      mergedMatches.push(sf);
+      existingTeams.add(homeLower);
+      existingTeams.add(awayLower);
+    }
+  }
+
   res.json({
     date: dateQuery,
-    matches,
-    isRealData: false,
-    source: isApiSportsConfigured() ? 'Worldwide Match Engine' : 'Worldwide Match Database',
+    matches: mergedMatches,
+    isRealData: isRealFeed,
+    source: isRealFeed ? `${sourceName} + SportyBet Card` : 'SportyBet Daily Football Suite',
+    total: mergedMatches.length,
+    realCount: realMatches.length,
     apiSportsConfigured: isApiSportsConfigured(),
     accountNotice: getApiAccountNotice(),
   });

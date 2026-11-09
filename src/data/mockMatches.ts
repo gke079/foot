@@ -681,7 +681,17 @@ export function getMatchesForDate(targetDate: string): Match[] {
     return directMatches;
   }
 
-  const isPast = targetDate < today;
+  // If asking for today's dynamic date or default, adapt todayMatches with targetDate
+  const realToday = new Date().toISOString().split('T')[0];
+  if (targetDate === realToday || targetDate === today) {
+    return todayMatches.map(m => ({
+      ...m,
+      date: targetDate,
+      id: `${m.id}-${targetDate}`,
+    }));
+  }
+
+  const isPast = targetDate < realToday;
   const sampleWorldwideFixtures = [
     {
       comp: POPULAR_COMPETITIONS[0], // Premier League

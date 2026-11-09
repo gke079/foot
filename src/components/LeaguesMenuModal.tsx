@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { X, Check, Globe, Search } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Check, Globe, Search, Flame } from 'lucide-react';
 import { POPULAR_COMPETITIONS } from '../data/mockMatches';
 import { Competition } from '../types/football';
+import { getSportyBetLeagueInfo, getSportyBetSortRank, SPORTYBET_TOP_LEAGUE_IDS } from '../utils/sportybetLeagues';
 
 interface LeaguesMenuModalProps {
   isOpen: boolean;
@@ -19,19 +20,33 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
   availableCompetitions = POPULAR_COMPETITIONS,
 }) => {
   const [search, setSearch] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState<string>('ALL');
-
-  if (!isOpen) return null;
+  const [selectedRegion, setSelectedRegion] = useState<string>('SPORTYBET_TOP');
 
   const comps = availableCompetitions.length > 0 ? availableCompetitions : POPULAR_COMPETITIONS;
 
-  const filtered = comps.filter(comp => {
+  const sortedComps = useMemo(() => {
+    return [...comps].sort((a, b) => {
+      const rankA = getSportyBetSortRank(a.id, a.name);
+      const rankB = getSportyBetSortRank(b.id, b.name);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [comps]);
+
+  if (!isOpen) return null;
+
+  const filtered = sortedComps.filter(comp => {
+    const sportyInfo = getSportyBetLeagueInfo(comp);
     const matchesSearch =
       comp.name.toLowerCase().includes(search.toLowerCase()) ||
-      comp.country.toLowerCase().includes(search.toLowerCase());
+      comp.country.toLowerCase().includes(search.toLowerCase()) ||
+      sportyInfo.displayName.toLowerCase().includes(search.toLowerCase());
+
+    const isSportyTop = SPORTYBET_TOP_LEAGUE_IDS.includes(comp.id.toLowerCase());
 
     const matchesRegion =
       selectedRegion === 'ALL' ||
+      (selectedRegion === 'SPORTYBET_TOP' && isSportyTop) ||
       (selectedRegion === 'Popular' && comp.category === 'Popular') ||
       (selectedRegion === 'European' && (comp.category === 'European' || comp.category === 'Popular' || comp.category === 'Domestic')) ||
       comp.category === selectedRegion;
@@ -79,19 +94,19 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
         {/* Region pills */}
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0 py-1">
           {[
-            { id: 'ALL', label: 'All World' },
-            { id: 'Popular', label: 'Top 5' },
-            { id: 'European', label: 'Europe' },
-            { id: 'Americas', label: 'Americas' },
-            { id: 'Asia', label: 'Asia & MidEast' },
-            { id: 'Africa', label: 'Africa' },
+            { id: 'SPORTYBET_TOP', label: '🔥 SportyBet Top' },
+            { id: 'ALL', label: '⭐ All World' },
+            { id: 'European', label: '🇪🇺 Europe' },
+            { id: 'Americas', label: '🌎 Americas' },
+            { id: 'Asia', label: '🌏 Asia & Saudi' },
+            { id: 'Africa', label: '🌍 Africa' },
           ].map(r => (
             <button
               key={r.id}
               onClick={() => setSelectedRegion(r.id)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                 selectedRegion === r.id
-                  ? 'bg-sky-600 text-white shadow-sm'
+                  ? 'bg-rose-600 text-white shadow-xs font-bold'
                   : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -108,9 +123,9 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
               onSelectLeague(null);
               onClose();
             }}
-            className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-colors text-xs font-bold ${
+            className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-colors text-xs font-bold cursor-pointer ${
               selectedLeagueId === null
-                ? 'bg-sky-600 text-white shadow-sm'
+                ? 'bg-rose-600 text-white shadow-xs'
                 : 'bg-slate-100 dark:bg-[#162238] text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#1a2944] border border-slate-200 dark:border-slate-800'
             }`}
           >
@@ -120,6 +135,7 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
 
           {filtered.map(comp => {
             const isSelected = selectedLeagueId === comp.id;
+            const sporty = getSportyBetLeagueInfo(comp);
             return (
               <button
                 key={comp.id}
@@ -127,20 +143,31 @@ export const LeaguesMenuModal: React.FC<LeaguesMenuModalProps> = ({
                   onSelectLeague(comp.id);
                   onClose();
                 }}
-                className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-colors text-xs font-bold ${
+                className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-colors text-xs font-bold cursor-pointer ${
                   isSelected
-                    ? 'bg-sky-600 text-white shadow-sm'
+                    ? 'bg-rose-600 text-white shadow-xs'
                     : 'bg-slate-100 dark:bg-[#162238] text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#1a2944] border border-slate-200 dark:border-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="text-base">{comp.flag}</span>
+                  <span className="text-base">{sporty.flag}</span>
                   <div className="text-left">
-                    <span className="block text-slate-900 dark:text-white font-bold">{comp.name}</span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-normal">{comp.country}</span>
+                    <span className="block text-slate-900 dark:text-white font-bold">
+                      {sporty.country} · {sporty.leagueName}
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-normal">
+                      {comp.name}
+                    </span>
                   </div>
                 </div>
-                {isSelected && <Check className="w-4 h-4" />}
+                <div className="flex items-center gap-1.5">
+                  {sporty.isTopLeague && !isSelected && (
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40">
+                      TOP
+                    </span>
+                  )}
+                  {isSelected && <Check className="w-4 h-4" />}
+                </div>
               </button>
             );
           })}
